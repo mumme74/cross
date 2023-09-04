@@ -1,0 +1,75 @@
+FROM ubuntu:latest
+ENTRYPOINT ["/bin/bash"]
+
+# RUN echo 'Acquire::http { Proxy "http://192.168.1.2:3142"; };' >> /etc/apt/apt.conf.d/00proxy
+
+RUN \
+    export DEBIAN_FRONTEND=noninteractive && \
+    apt -y update && \
+    apt -y upgrade && \
+    apt -y install \
+        bash \
+        autoconf automake autopoint bison build-essential bzip2 flex \
+        clang clang-tools libclang-dev cmake gettext git gperf intltool iputils-ping libc6-dev-i386 \
+        libffi-dev libgdk-pixbuf2.0-dev libltdl-dev libssl-dev libtool-bin \
+        libxml-parser-perl lzip make nano openssl p7zip-full patch perl \
+        pkg-config ruby scons sed unzip wget xz-utils libgl-dev meson ninja-build \
+        python3 python3-mako python3-pkg-resources python3-setuptools python-is-python3 \
+        python3-html5lib gettext nodejs \
+        && \
+    apt -y autoremove && \
+    apt -y autoclean && \
+    apt -y clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt -y update && \
+    exit 0
+
+RUN \
+    cd /opt && \
+    git clone https://github.com/tpoechtrager/osxcross.git && \
+    exit 0
+
+# must be done after git clone
+COPY SDKs/*.tar.xz /opt/osxcross/tarballs/
+
+# build osxcross
+RUN \
+    cd /opt/osxcross && \
+    UNATTENDED=1 ./build.sh && \
+    exit 0
+
+ENV PATH="${PATH}:/opt/osxcross/target/bin"
+
+COPY cross /opt/osxcross/cross
+
+RUN cd /opt/osxcross/cross && chmod +x *.sh && exit 0
+# force these from here
+# leave docker in a recoverable state while debugging
+RUN /opt/osxcross/cross/make-zlib.sh && exit 0
+RUN /opt/osxcross/cross/make-xv.sh && exit 0
+RUN /opt/osxcross/cross/make-bzip2.sh && exit 0
+RUN /opt/osxcross/cross/make-bison.sh && exit 0
+RUN /opt/osxcross/cross/make-jpeg.sh && exit 0
+RUN /opt/osxcross/cross/make-pcre.sh && exit 0
+RUN /opt/osxcross/cross/make-pcre2.sh && exit 0
+RUN /opt/osxcross/cross/make-libffi.sh && exit 0
+RUN /opt/osxcross/cross/make-png.sh && exit 0
+RUN /opt/osxcross/cross/make-icu.sh && exit 0
+RUN /opt/osxcross/cross/make-iconv.sh && exit 0
+RUN /opt/osxcross/cross/make-readline.sh && exit 0
+RUN /opt/osxcross/cross/make-harfbuzz.sh && exit 0
+RUN /opt/osxcross/cross/make-freetype.sh && exit 0
+RUN /opt/osxcross/cross/make-openssl.sh && exit 0
+RUN /opt/osxcross/cross/make-hunspell.sh && exit 0
+RUN /opt/osxcross/cross/make-gettext.sh && exit 0
+RUN /opt/osxcross/cross/make-libxml2.sh && exit 0
+RUN /opt/osxcross/cross/make-ncurses.sh && exit 0
+
+# make sure we didn't forget anything, build custom libs
+RUN /opt/osxcross/cross/buildBase.sh && exit 0
+
+# create qt
+RUN /opt/osxcross/cross/make-qt6.sh && exit 0
+    # or .../make-qt6.sh -s SDKname
+    # if you want a specific sdk
+

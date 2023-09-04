@@ -1,0 +1,34 @@
+diff -ur gettext-0.22/gettext-runtime/intl/configure gettext-0.22-patched/gettext-runtime/intl/configure
+--- gettext-0.22/gettext-runtime/intl/configure 2023-06-17 11:53:51.000000000 +0000
++++ gettext-0.22-patched/gettext-runtime/intl/configure 2023-09-02 21:53:28.035425264 +0000
+@@ -9806,8 +9806,8 @@
+ # so use this general approach.
+ lt_cv_sys_global_symbol_to_cdecl="$SED -n"\
+ $lt_cdecl_hook\
+-" -e 's/^T .* \(.*\)$/extern int \1();/p'"\
+-" -e 's/^$symcode$symcode* .* \(.*\)$/extern char \1;/p'"
++" -e 's/^T .* _\?\(.*\)$/extern int \1();/p'"\
++" -e 's/^$symcode$symcode* .* _\?\(.*\)$/extern char \1;/p'"
+
+ # Transform an extracted symbol line into symbol name and symbol address
+ lt_cv_sys_global_symbol_to_c_name_address="$SED -n"\
+@@ -9900,8 +9900,8 @@
+       fi
+
+       # Make sure that we snagged all the symbols we need.
+-      if $GREP ' nm_test_var$' "$nlist" >/dev/null; then
+-       if $GREP ' nm_test_func$' "$nlist" >/dev/null; then
++      if $EGREP ' _?nm_test_var$' "$nlist" >/dev/null; then
++       if $EGREP ' _?nm_test_func$' "$nlist" >/dev/null; then
+          cat <<_LT_EOF > conftest.$ac_ext
+ /* Keep this code in sync between libtool.m4, ltmain, lt_system.h, and tests.  */
+ #if defined _WIN32 || defined __CYGWIN__ || defined _WIN32_WCE
+@@ -9934,7 +9934,7 @@
+ {
+   { "@PROGRAM@", (void *) 0 },
+ _LT_EOF
+-         $SED "s/^$symcode$symcode* .* \(.*\)$/  {\"\1\", (void *) \&\1},/" < "$nlist" | $GREP -v main >> conftest.$ac_ext
++         $SED "s/^$symcode$symcode* .* _\?\(.*\)$/  {\"\1\", (void *) \&\1},/" < "$nlist" | $GREP -v main >> conftest.$ac_ext
+          cat <<\_LT_EOF >> conftest.$ac_ext
+   {0, (void *) 0}
+ };
