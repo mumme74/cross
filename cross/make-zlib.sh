@@ -15,7 +15,7 @@ echo "Building $PKG"
 cd src/$FILENAME
 
 if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
-  CHOST=x86_64-apple-darwin20.2 \
+  CHOST=$COMPILER_HOST \
   CFLAGS="-fPIC" \
   ./configure \
     --prefix=$USR_DIR \

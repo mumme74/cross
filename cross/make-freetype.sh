@@ -11,23 +11,25 @@ DOWNLOADURL=https://downloads.sourceforge.net/project/freetype/freetype2/$VERSIO
 cd /opt/osxcross/cross
 source common.sh
 
-echo "Building freetype"
+echo "Building $PKG"
 cd src/$FILENAME
 
 if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
   ./configure \
-    --host=x86_64-apple-darwin20.2 \
+    --host=$COMPILER_HOST \
     --with-sysroot=$TARGET_DIR \
-    CC=x86_64-apple-darwin20.2-cc \
-    AR=x86_64-apple-darwin20.2-ar \
-    STRIP=x86_64-apple-darwin20.2-strip \
-    RANLIB=x86_64-apple-darwin20.2-ranlib \
-    CFLAGS=" -I$USR_DIR/include" \
+    CC=${COMPILER_PREFIX}cc \
+    CXX=${COMPILER_PREFIX}c++ \
+    AR=${COMPILER_PREFIX}ar \
+    STRIP=${COMPILER_PREFIX}strip \
+    RANLIB=${COMPILER_PREFIX}ranlib \
+    CFLAGS=" -I$USR_DIR/include -I$USR_DIR/include/harfbuzz -I$USR_DIR/include/libpng16 -I$USR_DIR/include/lzma" \
     LDFLAGS="-L$USR_DIR/lib" \
     --prefix=$USR_DIR \
     --enable-shared \
     HARFBUZZ_CFLAGS="-I$USR_DIR/include/harfbuzz" \
-    LIBPNG_CFLAGS="-I$USR_DIR/include/libpng16"
+    LIBPNG_CFLAGS="-I$USR_DIR/include/libpng16" 2>&1 \
+    | tee config.log
 
   failOnError $? "Failed to configure $FILENAME"
 fi

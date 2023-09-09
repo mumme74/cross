@@ -1,11 +1,11 @@
 #!/bin/bash
 
-VERSION=3.4.4
-PKG=libffi
+VERSION=2.14.2
+PKG=fontconfig
 FILENAME=$PKG-$VERSION
 TARNAME=$FILENAME.tar.gz
-SHA256=d66c56ad259a82cf2a9dfc408b32bf5da52371500b84745f7fb8b645712df676
-DOWNLOADURL=https://github.com/libffi/libffi/releases/download/v$VERSION/$TARNAME
+SHA256=3ba2dd92158718acec5caaf1a716043b5aa055c27b081d914af3ccb40dce8a55
+DOWNLOADURL=https://www.freedesktop.org/software/fontconfig/release/$TARNAME
 
 
 cd /opt/osxcross/cross
@@ -15,23 +15,25 @@ echo "Building $PKG"
 cd src/$FILENAME
 
 if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
-  ./configure \
-    --host=$COMPILER_HOST \
+  CHOST=${COMPILER_HOST} \
+  ./configure --prefix=$USR_DIR \
+    --host=${COMPILER_HOST} \
     --with-sysroot=$TARGET_DIR \
-    --with-pic \
     CC=${COMPILER_PREFIX}cc \
     CXX=${COMPILER_PREFIX}c++ \
     AR=${COMPILER_PREFIX}ar \
     STRIP=${COMPILER_PREFIX}strip \
     RANLIB=${COMPILER_PREFIX}ranlib \
-    CFLAGS=" -I$USR_DIR/include" \
+    CFLAGS=" -I$USR_DIR/include -I$USR_DIR/include/freetype2" \
     LDFLAGS="-L$USR_DIR/lib" \
-    --prefix=$USR_DIR
+    FREETYPE_CFLAGS="-I$USR_DIR/include/freetype2" \
+    FREETYPE_LIBS="-lfreetype" \
+    --enable-shared
 
   failOnConfigure $?
 fi
 
 make --jobs=$(nproc) JOBS=$(nproc)
 failOnBuild $?
-make install PREFIX=$USR_DIR
+make install
 failOnInstall $?

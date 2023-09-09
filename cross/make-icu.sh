@@ -14,65 +14,73 @@ source common.sh
 
 echo "Building $PKG"
 
-echo "-------------------------"
-if [ ! -d $SRC_DIR/icu-build-host ] || \
-   [ ! -f $SRC_DIR/icu-build-host/config.log ] || \
-   [ "$FORCE" == true ]; then
-  if [ "$FORCE" == true ]; then
-    echo "cleaning host build on $PKG"
-    rm -rf $SRC_DIR/icu-build-host
+echo "step=$STEP"
+
+if [ -z "$STEP" ] || [ $STEP == 1 ]; then
+  echo "-------------------------"
+  if [ ! -d $SRC_DIR/icu-build-host ] || \
+    [ ! -f $SRC_DIR/icu-build-host/config.log ] || \
+    [ "$FORCE" == true ]; then
+    if [ "$FORCE" == true ]; then
+      echo "cleaning host build on $PKG"
+      rm -rf $SRC_DIR/icu-build-host
+    fi
+
+    echo "building $PKG host"
+    mkdir -p $SRC_DIR/icu-build-host
+    cd $SRC_DIR/icu-build-host
+    rm -Rf *
+
+    $SRC_DIR/icu/source/runConfigureICU Linux
+    failOnError $? "Failed to configure $PKG host"
+
+    make
+    failOnError $? "Failed to make $PKG host"
+
+    cd ../../
   fi
-
-  echo "building $PKG host"
-  mkdir -p $SRC_DIR/icu-build-host
-  cd $SRC_DIR/icu-build-host
-  rm -Rf *
-
-  $SRC_DIR/icu/source/runConfigureICU Linux
-  failOnError $? "Failed to configure $PKG host"
-
-  make
-  failOnError $? "Failed to make $PKG host"
-
-  cd ../../
 fi
 
-echo "-------------------------"
-if [ ! -d $SRC_DIR/icu-build-target ] || \
-   [ ! -f $SRC_DIR/icu-build-target/config.log ] || \
-   [ "$FORCE" == true ]; then
-  if [ "$FORCE" == true ]; then
-    echo "cleaning target build on $PKG"
-    rm -rf $SRC_DIR/icu-build-target
+# build step 2
+if [ -z "$STEP" ] || [ $STEP == 2]; then
+  echo "-------------------------"
+  if [ ! -d $SRC_DIR/icu-build-target ] || \
+    [ ! -f $SRC_DIR/icu-build-target/config.log ] || \
+    [ "$FORCE" == true ]; then
+    if [ "$FORCE" == true ]; then
+      echo "cleaning target build on $PKG"
+      rm -rf $SRC_DIR/icu-build-target
+    fi
+    echo "building $PKG target"
+    mkdir -p $SRC_DIR/icu-build-target
+    cd $SRC_DIR/icu-build-target
+    rm -Rf *
+    $SRC_DIR/icu/source/configure \
+      --host=$COMPILER_HOST \
+      --with-sysroot=$TARGET_DIR \
+      --with-cross-build=$SRC_DIR/icu-build-host \
+      --with-pic \
+      CC=${COMPILER_PREFIX}cc \
+      CXX=${COMPILER_PREFIX}c++ \
+      AR=${COMPILER_PREFIX}ar \
+      STRIP=${COMPILER_PREFIX}strip \
+      RANLIB=${COMPILER_PREFIX}ranlib \
+      CFLAGS=" -I$USR_DIR/include/zlib" \
+      LDFLAGS="-L$USR_DIR/lib" \
+      --prefix=$USR_DIR \
+      RELEASE_CFLAGS='-O2' \
+      RELEASE_CXXFLAGS='-O2' \
+      DEBUG_CFLAGS='-g -O0' \
+      DEBUG_CXXFLAGS='-g -O0'
+
+    failOnError $? "Failed to configure $PKG target"
+  else
+    cd "$SRC_DIR/icu-build-target"
   fi
-  echo "building $PKG target"
-  mkdir -p $SRC_DIR/icu-build-target
-  cd $SRC_DIR/icu-build-target
-  rm -Rf *
-  $SRC_DIR/icu/source/configure \
-    --host=x86_64-apple-darwin20.2 \
-    --with-sysroot=$TARGET_DIR \
-    --with-cross-build=$SRC_DIR/icu-build-host \
-    --with-pic \
-    CC=x86_64-apple-darwin20.2-cc \
-    AR=x86_64-apple-darwin20.2-ar \
-    STRIP=x86_64-apple-darwin20.2-strip \
-    RANLIB=x86_64-apple-darwin20.2-ranlib \
-    CFLAGS=" -I$USR_DIR/include/zlib" \
-    LDFLAGS="-L$USR_DIR/lib" \
-    --prefix=$USR_DIR \
-    RELEASE_CFLAGS='-O2' \
-    RELEASE_CXXFLAGS='-O2' \
-    DEBUG_CFLAGS='-g -O0' \
-    DEBUG_CXXFLAGS='-g -O0'
 
-  failOnError $? "Failed to configure $PKG target"
-else
-  cd "$SRC_DIR/icu-build-target"
+  make --jobs=$(nproc) JOBS=$(nproc)
+  failOnError $? "Failed to make $PKG target"
+
+  make install
+  failOnError $? "Failed to install $PKG target"
 fi
-
-make --jobs=$(nproc) JOBS=$(nproc)
-failOnError $? "Failed to make $PKG target"
-
-make install DESTDIR=$USR_DIR
-failOnError $? "Failed to install $PKG target"

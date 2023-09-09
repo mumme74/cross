@@ -1,12 +1,12 @@
 #!/bin/bash
 
-VERSION=8.1.1
-PKG=harfbuzz
-FILENAME=harfbuzz-$VERSION
-TARNAME=$FILENAME.tar.xz
-SHA256=0305ad702e11906a5fc0c1ba11c270b7f64a8f5390d676aacfd71db129d6565f
-DOWNLOADURL=https://github.com/harfbuzz//harfbuzz/releases/download/$VERSION/$TARNAME
-
+VERSION=3430000
+YEAR=2023
+PKG=sqlite-autoconf
+FILENAME=$PKG-$VERSION
+TARNAME=$FILENAME.tar.gz
+SHA256=49008dbf3afc04d4edc8ecfc34e4ead196973034293c997adad2f63f01762ae1
+DOWNLOADURL=https://www.sqlite.org/$YEAR/$TARNAME
 
 cd /opt/osxcross/cross
 source common.sh
@@ -17,16 +17,23 @@ cd src/$FILENAME
 if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
   CHOST=$COMPILER_HOST \
   ./configure --prefix=$USR_DIR \
-    --host=$COMPILER_HOST \
+     --host=$COMPILER_HOST \
     --with-sysroot=$TARGET_DIR \
     CC=${COMPILER_PREFIX}cc \
     CXX=${COMPILER_PREFIX}c++ \
     AR=${COMPILER_PREFIX}ar \
     STRIP=${COMPILER_PREFIX}strip \
     RANLIB=${COMPILER_PREFIX}ranlib \
-    CFLAGS=" -I$USR_DIR/include" \
+    CFLAGS=" -I$USR_DIR/include/zlib" \
     LDFLAGS="-L$USR_DIR/lib" \
-    --enable-shared
+    --enable-shared \
+    --enable-pcre2-16 \
+    --enable-utf \
+    --enable-unicode-properties \
+    --enable-cpp \
+    --disable-pcre2grep-libz \
+    --disable-pcre2grep-libbz2 \
+    --disable-pcre2test-libreadline
 
   failOnConfigure $?
 fi

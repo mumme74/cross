@@ -1,12 +1,11 @@
 #!/bin/bash
-
-VERSION=8.2
-PKG=readline
+#https://ftp.postgresql.org/pub/source/v15.4/postgresql-15.4.tar.bz2
+VERSION=15.4
+PKG=postgresql
 FILENAME=$PKG-$VERSION
-TARNAME=$FILENAME.tar.gz
-SHA256=3feb7171f16a84ee82ca18a36d7b9be109a52c04f492a053331d7d1095007c35
-DOWNLOADURL=https://ftp.gnu.org/gnu/readline/$TARNAME
-
+TARNAME=$FILENAME.tar.bz2
+SHA256=baec5a4bdc4437336653b6cb5d9ed89be5bd5c0c58b94e0becee0a999e63c8f9
+DOWNLOADURL=https://ftp.postgresql.org/pub/source/v$VERSION/$TARNAME
 
 cd /opt/osxcross/cross
 source common.sh
@@ -24,14 +23,23 @@ if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
     AR=${COMPILER_PREFIX}ar \
     STRIP=${COMPILER_PREFIX}strip \
     RANLIB=${COMPILER_PREFIX}ranlib \
-    CFLAGS=" -I$USR_DIR/include" \
+    CFLAGS=" -I$USR_DIR/include/zlib" \
     LDFLAGS="-L$USR_DIR/lib" \
-    --enable-shared
+    --enable-shared \
+    --enable-utf \
+    --enable-unicode-properties \
+    --enable-cpp \
 
   failOnConfigure $?
 fi
 
-make --jobs=$(nproc) JOBS=$(nproc)
+cd src/interfaces/
+
+make PG_SYSROOT=$SDK_PATH --jobs=$(nproc) JOBS=$(nproc)
 failOnBuild $?
 make install
 failOnInstall $?
+
+#cd $CROSS_DIR/src/$FILENAME/src/include
+#make install
+#failOnInstall $?

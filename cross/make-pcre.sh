@@ -15,14 +15,15 @@ echo "Building $PKG"
 cd src/$FILENAME
 
 if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
-  CHOST=x86_64-apple-darwin20.2 \
+  CHOST=$COMPILER_HOST \
   ./configure --prefix=$USR_DIR \
-    --host=x86_64-apple-darwin20.2 \
+    --host=$COMPILER_HOST \
     --with-sysroot=$USR_DIR \
-    CC=x86_64-apple-darwin20.2-cc \
-    AR=x86_64-apple-darwin20.2-ar \
-    STRIP=x86_64-apple-darwin20.2-strip \
-    RANLIB=x86_64-apple-darwin20.2-ranlib \
+    CC=${COMPILER_PREFIX}cc \
+    CXX=${COMPILER_PREFIX}c++ \
+    AR=${COMPILER_PREFIX}ar \
+    STRIP=${COMPILER_PREFIX}strip \
+    RANLIB=${COMPILER_PREFIX}ranlib \
     CFLAGS=" -I$USR_DIR/include" \
     LDFLAGS="-L$USR_DIR/lib" \
     --enable-shared \

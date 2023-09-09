@@ -16,6 +16,7 @@ RUN \
         pkg-config ruby scons sed unzip wget xz-utils libgl-dev meson ninja-build \
         python3 python3-mako python3-pkg-resources python3-setuptools python-is-python3 \
         python3-html5lib gettext nodejs \
+        libcups2-dev libxkbcommon-dev libnss3-dev libdbus-1-dev libdrm-dev \
         && \
     apt -y autoremove && \
     apt -y autoclean && \
@@ -39,10 +40,17 @@ RUN \
     exit 0
 
 ENV PATH="${PATH}:/opt/osxcross/target/bin"
+ENV MACOSX_DEPLOYMENT_TARGET=10.7
 
 COPY cross /opt/osxcross/cross
 
 RUN cd /opt/osxcross/cross && chmod +x *.sh && exit 0
+
+# set architecture to x86_64
+RUN cd /opt/osxcross/cross/ && \
+    ./config-set.sh x86_64-apple && \
+    exit 0
+
 # force these from here
 # leave docker in a recoverable state while debugging
 RUN /opt/osxcross/cross/make-zlib.sh && exit 0
@@ -59,10 +67,16 @@ RUN /opt/osxcross/cross/make-iconv.sh && exit 0
 RUN /opt/osxcross/cross/make-readline.sh && exit 0
 RUN /opt/osxcross/cross/make-harfbuzz.sh && exit 0
 RUN /opt/osxcross/cross/make-freetype.sh && exit 0
+RUN /opt/osxcross/cross/make-fontconfig.sh && exit 0
 RUN /opt/osxcross/cross/make-openssl.sh && exit 0
 RUN /opt/osxcross/cross/make-hunspell.sh && exit 0
 RUN /opt/osxcross/cross/make-gettext.sh && exit 0
 RUN /opt/osxcross/cross/make-libxml2.sh && exit 0
+#RUN /opt/osxcross/cross/make-boost.sh && exit 0
+RUN /opt/osxcross/cross/make-sqlite.sh && exit 0
+RUN /opt/osxcross/cross/make-unixodbc.sh && exit 0
+#RUN /opt/osxcross/cross/make-postgree-client.sh && exit 0
+RUN /opt/osxcross/cross/make-mysql-client.sh && exit 0
 RUN /opt/osxcross/cross/make-ncurses.sh && exit 0
 
 # make sure we didn't forget anything, build custom libs

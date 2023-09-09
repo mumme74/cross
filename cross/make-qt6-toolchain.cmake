@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.18)
 include_guard(GLOBAL)
 
+set(SDK_PATH /opt/osxcross/target/SDK/*)
+
 set(CMAKE_SYSTEM_NAME Darwin)
 set(CMAKE_SYSTEM_PROCESSOR x86_64)
 
@@ -16,9 +18,9 @@ set(ENV{PKG_CONFIG_SYSROOT_DIR} ${CMAKE_SYSROOT})
 set(CMAKE_C_COMPILER ${CROSS_COMPILER}-cc)
 set(CMAKE_CXX_COMPILER ${CROSS_COMPILER}-c++)
 
-set(QT_COMPILER_FLAGS "-march=x86-64")
+set(QT_COMPILER_FLAGS "-march=x86-64 -I${SDK_PATH}/usr/include")
 set(QT_COMPILER_FLAGS_RELEASE "-O2 -pipe")
-set(QT_LINKER_FLAGS "-Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed")
+set(QT_LINKER_FLAGS "-Wl -L${SDK_PATH}/usr/lib")
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)

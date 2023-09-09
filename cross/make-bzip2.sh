@@ -22,11 +22,13 @@ fi
 
 make libbz2.a bzip2 bzip2recover --jobs=$(nproc) JOBS=$(nproc) \
   PREFIX=$USR_DIR \
-  CC=x86_64-apple-darwin20.2-cc \
-  AR=x86_64-apple-darwin20.2-ar \
-  STRIP=x86_64-apple-darwin20.2-strip \
-  RANLIB=x86_64-apple-darwin20.2-ranlib
+  CC=${COMPILER_PREFIX}cc \
+  CXX=${COMPILER_PREFIX}c++ \
+  AR=${COMPILER_PREFIX}ar \
+  STRIP=${COMPILER_PREFIX}strip \
+  RANLIB=${COMPILER_PREFIX}ranlib
+
 failOnBuild $?
 
-make install PREFIX=$TARGET_DIR
+make install PREFIX=$USR_DIR
 failOnInstall $?

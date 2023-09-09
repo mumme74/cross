@@ -7,6 +7,9 @@ USR_DIR=$TARGET_DIR/usr
 # read command lines
 source getopt.sh
 
+# the architecture
+source config.sh
+
 validate_md5sum() {
   # arg1 = path, arg2 = chksum
   chksum=$(md5sum $1| sed 's/ .*//')

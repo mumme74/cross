@@ -14,8 +14,13 @@ echo "Building $PKG"
 cd src/$FILENAME
 
 if [[ ! -f "$SRC_DIR/$FILENAME/Makefile" || "$FORCE" == true ]]; then
+  arch=$COMPILER_ARCH
+  if [ "${arch::-6}" == "e"]; then
+    arch=${arch:-1}
+  fi
+
   ./Configure \
-    darwin64-x86_64-cc \
+    darwin64-$arch-cc \
     shared \
     enable-ec_nistp_64_gcc_128 \
     no-comp \
