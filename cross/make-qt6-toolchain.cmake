@@ -4,24 +4,29 @@ include_guard(GLOBAL)
 set(SDK_PATH /opt/osxcross/target/SDK/*)
 
 set(CMAKE_SYSTEM_NAME Darwin)
-set(CMAKE_SYSTEM_PROCESSOR x86_64)
+set(CMAKE_SYSTEM_PROCESSOR *)
 
 set(TARGET_SYSROOT /opt/osxcross/target)
-set(CROSS_COMPILER /opt/osxcross/target/bin/x86_64-apple-darwin20.2)
+set(CROSS_COMPILER /opt/osxcross/target/bin/*)
 
 set(CMAKE_SYSROOT ${TARGET_SYSROOT})
+set(CMAKE_INCLUDE_PATH ${SDK_PATH}/usr/include)
+set(CMAKE_LIBRARY_PATH ${SDK_PATH}/usr/lib)
+set(CMAKE_PREFIX_PATH /opt/osxcross/cross/host)
 
 set(ENV{PKG_CONFIG_PATH} "")
 set(ENV{PKG_CONFIG_LIBDIR} ${CMAKE_SYSROOT}/usr/lib/pkgconfig:${CMAKE_SYSROOT}/usr/share/pkgconfig)
 set(ENV{PKG_CONFIG_SYSROOT_DIR} ${CMAKE_SYSROOT})
 
+include_directories("${TARGET_SYSROOT}/usr/include ${SDK_PATH}/usr/include")
+link_directories("${TARGET_SYSROOT}/usr/lib ${SDK_PATH}/usr/lib")
+
 set(CMAKE_C_COMPILER ${CROSS_COMPILER}-cc)
 set(CMAKE_CXX_COMPILER ${CROSS_COMPILER}-c++)
 
-set(QT_COMPILER_FLAGS "-march=x86-64 -I${SDK_PATH}/usr/include")
+set(QT_COMPILER_FLAGS "-I${SDK_PATH}/usr/include")
 set(QT_COMPILER_FLAGS_RELEASE "-O2 -pipe")
 set(QT_LINKER_FLAGS "-Wl -L${SDK_PATH}/usr/lib")
-
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)

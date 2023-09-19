@@ -1,5 +1,3 @@
-mysql-8.1.0.tar.gz
-
 #!/bin/bash
 MAJOR=8
 MINOR=1
@@ -10,6 +8,7 @@ FILENAME=$PKG-$VERSION
 TARNAME=$FILENAME.tar.gz
 MD5SUM=13fe8f9f463b2f462763cd21459590a0
 DOWNLOADURL=https://dev.mysql.com/get/Downloads/MySQL-$MAJOR.$MINOR/$TARNAME
+PATCH_FILE=mysql-client.patch
 
 cd /opt/osxcross/cross
 source common.sh
@@ -17,32 +16,88 @@ source common.sh
 echo "Building $PKG"
 cd src/$FILENAME
 
-if [ ! -f "$SRC_DIR/$FILENAME/config.log" ] || [ "$FORCE" == true ]; then
-  if [ -d "$SRC_DIR/$FILENAME-build" ]; then
-    rm -Rf "$SRC_DIR/$FILENAME-build"
+HOST_BUILD_DIR=$SRC_DIR/$FILENAME-build-host
+TARGET_BUILD_DIR=$SRC_DIR/$FILENAME-build-target
+
+if [ -z "$STEP" ] || [ "$STEP" -eq 1 ]; then
+  if [ ! -f "$HOST_BUILD_DIR/config.log" ] || [ "$FORCE" == true ]; then
+    if [ -d "$HOST_BUILD_DIR" ]; then
+      rm -Rf "$HOST_BUILD_DIR"
+    fi
+    mkdir -p "$HOST_BUILD_DIR"
+
+    cd "$HOST_BUILD_DIR"
+
+    cmake \
+      -DCMAKE_INSTALL_PREFIX=$CROSS_DIR/host \
+      -DWITHOUT_SERVER=ON \
+      -DWITH_UNIT_TESTS=OFF \
+      -DWITH_LIBEVENT=bundled \
+      -DBOOST_INCLUDE_DIR=$USR_DIR/include \
+      "$SRC_DIR/$FILENAME" | tee $HOST_BUILD_DIR/config.log
+
+    failOnConfigure $?
+  else
+    cd "$HOST_BUILD_DIR"
   fi
-  mkdir -p "$SRC_DIR/$FILENAME-build"
 
-  source "$CROSS_DIR/configCmakeForArch.sh"
+  cmake --build . --parallel
+  failOnBuild $?
 
-  cd "$SRC_DIR/$FILENAME-build"
-
-  cmake \
-    -DWITHOUT_SERVER=ON \
-    -DWITH_UNIT_TESTS=OFF \
-    -DDOWNLOAD_BOOST=1 \
-    -DWITH_BOOST=../$FILENAME/downloads/ \
-    -DCMAKE_TOOLCHAIN_FILE=$CROSS_DIR/make-qt6-toolchain.cmake \
-    "$SRC_DIR/$FILENAME"
-
-  failOnConfigure $?
-else
-  cd "$SRC_DIR/$FILENAME-build"
+  cmake --install . --prefix=$CROSS_DIR/host
+  failOnInstall $?
 fi
 
-cmake --build . --parallel
-failOnBuild $?
 
-cmake --install . --prefix=$USR_DIR
-failOnInstall $?
+if [ -z "$STEP" ] || [ "$STEP" -eq 2 ]; then
+  if [ ! -f "$TARGET_BUILD_DIR/config.log" ] || [ "$FORCE" == true ]; then
+    if [ -d "$TARGET_BUILD_DIR" ]; then
+      rm -Rf "$TARGET_BUILD_DIR"
+    fi
+    mkdir -p "$TARGET_BUILD_DIR"
 
+    cd "$TARGET_BUILD_DIR"
+
+    cmake \
+      -DCMAKE_INSTALL_PREFIX=$USR_DIR \
+      -DWITHOUT_SERVER=ON \
+      -DWITH_UNIT_TESTS=OFF \
+      -DWITH_LIBEVENT=system \
+      -DENABLE_DTRACE=OFF \
+      -DWITH_ZLIB=bundled \
+      -DWITH_LIBTOOL=OFF \
+      -DHAVE_GCC_ATOMIC_BUILTINS=1 \
+      -DHOST_BUILD_DIR=$HOST_BUILD_DIR \
+      -DLIBEVENT_INCLUDE_PATH=event2 \
+      -DLIBEVENT_LIB_PATHS=/usr/lib \
+      -DLIBEVENT_CORE=$USR_DIR/lib/libevent_core.dylib \
+      -DLIBEVENT_EXTRA=$USR_DIR/lib/libevent_extra.dylib \
+      -DLIBEVENT_PTHREADS=$USR_DIR/lib/libevent_pthreads.dylib \
+      -DLIBEVENT_OPENSSL=$USR_LIB/lib/libevent_openssl.dylib \
+      -DLIBEVENT_VERSION="2.1.12-stable" \
+      -DBOOST_INCLUDE_DIR=$USR_DIR/include \
+      -DOPENSSL_ROOT_DIR=$USR_DIR \
+      -DOPENSSL_INCLUDE_DIR=$USR_DIR/include \
+      -DOPENSSL_LIBRARY=$USR_DIR/lib/libssl.3.dylib \
+      -DOPENSSL_CRYPTO_LIBRARY=$USR_DIR/lib/libcrypto.3.dylib \
+      -DCRYPTO_LIBRARY=$USR_DIR/lib/libcrypto.3.dylib \
+      -DCURSES_INCLUDE_PATH=$USR_DIR/include \
+      -DCURSES_LIBRARY=$USR_DIR/lib/libncursesw.6.dylib \
+      -DHAVE_CLOCK_GETTIME_EXITCODE=0 \
+      -DHAVE_CLOCK_GETTIME_EXITCODE__TRYRUN_OUTPUT=0 \
+      -DHAVE_CLOCK_REALTIME_EXITCODE=0 \
+      -DHAVE_CLOCK_REALTIME_EXITCODE__TRYRUN_OUTPUT=0 \
+      -DCMAKE_TOOLCHAIN_FILE=$CROSS_DIR/make-qt6-toolchain.cmake \
+      "$SRC_DIR/$FILENAME" | tee $TARGET_BUILD_DIR/config.log
+
+    failOnConfigure $?
+  else
+    cd "$HOST_BUILD_DIR"
+  fi
+
+  cmake --build . --parallel
+  failOnBuild $?
+
+  cmake --install . --prefix=$USR_DIR
+  failOnInstall $?
+fi

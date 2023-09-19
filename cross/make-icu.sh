@@ -31,18 +31,26 @@ if [ -z "$STEP" ] || [ $STEP == 1 ]; then
     cd $SRC_DIR/icu-build-host
     rm -Rf *
 
-    $SRC_DIR/icu/source/runConfigureICU Linux
+    chmod +x $SRC_DIR/icu/source/configure
+    $SRC_DIR/icu/source/configure \
+      --prefix=$CROSS_DIR/host/ \
+      RELEASE_CFLAGS='-O2' \
+      RELEASE_CXXFLAGS='-O2'
+
     failOnError $? "Failed to configure $PKG host"
 
-    make
+    make --jobs=$(nproc) JOBS=$(nproc)
     failOnError $? "Failed to make $PKG host"
+
+    make install
+    failOnInstall $?
 
     cd ../../
   fi
 fi
 
 # build step 2
-if [ -z "$STEP" ] || [ $STEP == 2]; then
+if [ -z "$STEP" ] || [ "$STEP" -eq 2]; then
   echo "-------------------------"
   if [ ! -d $SRC_DIR/icu-build-target ] || \
     [ ! -f $SRC_DIR/icu-build-target/config.log ] || \
@@ -51,10 +59,14 @@ if [ -z "$STEP" ] || [ $STEP == 2]; then
       echo "cleaning target build on $PKG"
       rm -rf $SRC_DIR/icu-build-target
     fi
+
     echo "building $PKG target"
+    cd $SRC_DIR/icu/source
+    autoreconf && automake --add-missing --copy --force-missing
     mkdir -p $SRC_DIR/icu-build-target
     cd $SRC_DIR/icu-build-target
     rm -Rf *
+
     $SRC_DIR/icu/source/configure \
       --host=$COMPILER_HOST \
       --with-sysroot=$TARGET_DIR \

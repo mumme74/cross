@@ -15,7 +15,7 @@ cd src/$FILENAME
 
 if [[ ! -f "$SRC_DIR/$FILENAME/Makefile" || "$FORCE" == true ]]; then
   arch=$COMPILER_ARCH
-  if [ "${arch::-6}" == "e"]; then
+  if [ "${arch::-1}" == "e" ]; then
     arch=${arch:-1}
   fi
 

@@ -17,7 +17,7 @@ cd src/$FILENAME
 
 if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
   ./configure \
-    --host=x$COMPILER_HOST \
+    --host=$COMPILER_HOST \
     --with-sysroot=$TARGET_DIR \
     --with-pic \
     --with-iconv=$USR_DIR \

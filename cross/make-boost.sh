@@ -2,13 +2,13 @@
 #https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.gz
 
 MAJOR=1
-MINOR=83
+MINOR=77
 MICRO=0
-VERSION=1.83.0
+VERSION=$MAJOR.$MINOR.$MICRO
 PKG=boost
 FILENAME=${PKG}_$(echo $VERSION |sed 's/\./_/g' )
-TARNAME=$FILENAME.tar.gz
-SHA256=c0685b68dd44cc46574cce86c4e17c0f611b15e195be9848dfd0769a0a207628
+TARNAME=$FILENAME.tar.bz2
+SHA256=5347464af5b14ac54bb945dc68f1dd7c56f0dad7262816b956138fc53bcc0131
 DOWNLOADURL=https://boostorg.jfrog.io/artifactory/main/release/$VERSION/source/$TARNAME
 
 cd /opt/osxcross/cross
@@ -35,7 +35,7 @@ if [ -z "$STEP" ] || [ "$STEP" == 1 ]; then
     ../$FILENAME/bootstrap.sh \
       --with-toolset=clang \
       --without-libraries=python \
-      --prefix=$SRC_DIR/host-boost
+      --prefix=$SRC_DIR/host/
 
     failOnConfigure $?
   fi
@@ -45,12 +45,12 @@ if [ -z "$STEP" ] || [ "$STEP" == 1 ]; then
     toolset=clang \
     --build-dir=$HOST_BUILD_DIR \
     --without-python \
-    --prefix=$SRC_DIR/host-boost \
+    --prefix=$SRC_DIR/host \
     -j$(nproc)
 
   failOnInstall $?
 
-  echo "Done build and install host $PKG\ninto:$SRC_DIR/host-boost"
+  echo "Done build and install host $PKG\ninto:$SRC_DIR/host"
 fi
 
 
@@ -67,8 +67,7 @@ if [ -z "$STEP" ] || [ "$STEP" == 2 ]; then
     incl=$USR_DIR/include
 
     ../$FILENAME/bootstrap.sh --prefix=$USR_DIR \
-      --with-toolset=clang-darwin \
-      --cxx=${COMPILER_PREFIX}c++ \
+      --with-toolset=clang \
       --with-icu=$USR_DIR/lib \
       CC=${COMPILER_PREFIX}cc \
       CXX=${COMPILER_PREFIX}c++ \
@@ -91,11 +90,20 @@ if [ -z "$STEP" ] || [ "$STEP" == 2 ]; then
 
   cd ../$FILENAME
 
-  echo "asmflags="--target=$COMPILER_HOST"
+  usrConfigJam= "using clang-darwin : osxcross : \n"
+  usrConfigJam+="  $TARGET_DIR/bin/${COMPILER_PREFIX}c++ :\n"
+  usrConfigJam+="    <compilerflags>--sysroot=$TARGET_DIR $USR_INCLUDES \n"
+  usrConfigJam+="    <linkflags>$USR_LIB_PATHS\n"
+  usrConfigJam+="    <archiver>$TARGET_DIR/bin/${COMPILER_PREFIX}ar \n"
+  usrConfigJam+="    <ranlib>$TARGET_DIR/bin/${COMPILER_PREFIX}ranlib \n"
+  usrConfigJam+=";"
+  echo -e "$usrConfigJam" > $SRC_DIR/$FILENAME/tools/build/src/user-config.jam
+
 
   $TARGET_BUILD_DIR/b2 install \
-    toolset=darwin \
-    -toolset=clang  \
+    toolset=clang-darwin-osxcross \
+    target-os=darwin \
+    -q -d+2\
     architecture=${COMPILER_ARCH:0:3} \
     address-model=64 \
     abi=aapcs \
@@ -103,6 +111,7 @@ if [ -z "$STEP" ] || [ "$STEP" == 2 ]; then
     cflags="--target=$COMPILER_HOST" \
     cxxflags="--target=$COMPILER_HOST" \
     linkflags="--target=$COMPILER_HOST" \
+    link=static,shared \
     threading=multi \
     binary-format=mach-o \
     --cxx=${COMPILER_PREFIX}c++ \

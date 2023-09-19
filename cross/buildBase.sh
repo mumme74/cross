@@ -16,15 +16,17 @@ SCRIPTS="make-bzip2.sh \
   make-readline.sh \
   make-harfbuzz.sh \
   make-openssl.sh \
+  make-libevent.sh \
   make-hunspell.sh \
   make-freetype.sh \
   make-fontconfig.sh \
   make-gettext.sh \
   make-libxml2.sh \
-  make-sqlite.sh \
-  make-unixobdc.sh \
-  make-mysql-client.sh \
+  make-boost.sh \
   make-ncurses.sh \
+  make-sqlite.sh \
+  make-unixodbc.sh \
+  make-mysql-client.sh \
 "
 # not yet working
 #  make-boost.sh \
@@ -37,7 +39,7 @@ for SCRIPT in $SCRIPTS ; do
   stdbuf -oL "./$SCRIPT" "$@" 2>&2 && 1>&1
   exitCode=$?
   if [ $exitCode -ne 0 ]; then
-    echo "*** Failed when runing $SCRIPT, exiting"
+    echo "*** Failed when running $SCRIPT, exiting"
     exit $exitCode
   fi
 done

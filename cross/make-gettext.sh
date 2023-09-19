@@ -6,7 +6,7 @@ FILENAME=$PKG-$VERSION
 TARNAME=$FILENAME.tar.gz
 SHA256=49f089be11b490170bbf09ed2f51e5f5177f55be4cc66504a5861820e0fb06ab
 DOWNLOADURL=https://ftp.gnu.org/pub/gnu/gettext/$TARNAME
-PATCHFILE=gettext.patch
+PATCH_FILE=gettext.patch
 
 
 cd /opt/osxcross/cross

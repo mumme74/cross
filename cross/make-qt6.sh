@@ -14,18 +14,20 @@ cd /opt/osxcross/cross
 source common.sh
 
 if [ -z "$STEP" ] || [ $STEP == 1 ]; then
-  if [ ! -d "$SRC_DIR/$FILENAME-build-host" ] || ["$FORCE" -eq true ]; then
+  if [ ! -d "$SRC_DIR/$FILENAME-build-host" ] || [ "$FORCE" -eq true ]; then
     rm -Rf "$SRC_DIR/$FILENAME-build-host" || true # when forcing a reconfigure
     echo "---- configuring Qt host bin tools"
     mkdir -p "$SRC_DIR/$FILENAME-build-host"
     cd "$SRC_DIR/$FILENAME-build-host"
     $SRC_DIR/$FILENAME/configure \
-      -prefix $CROSS_DIR/host/qt6 \
+      -prefix $CROSS_DIR/host \
       -make libs \
       -make tools \
       -- \
         -DCMAKE_C_COMPILER=clang \
-        -DCMAKE_CXX_COMPILER=clang++
+        -DCMAKE_CXX_COMPILER=clang++ \
+        -DQT_BUILD_EXAMPLES=OFF \
+        -DQT_BUILD_TESTS=OFF
 
     failOnConfigure $?
   else
@@ -40,12 +42,13 @@ fi
 # build step 2
 if [ -z "$STEP" ] || [ $STEP == 2 ]; then
   if [ ! -d "$SRC_DIR/$FILENAME-build-target" ] || \
-     [ "$FORCE" -eq true ]; then
+     [ "$FORCE" == true ]; then
     echo "------------------------------"
     echo "Configuring qt for target macosx"
 
-    source "$CROSS_DIR/configCmakeForArch.sh"
     incl=$USR_DIR/include
+
+    echo $COMPILER_PREFIX
 
     rm -Rf "$SRC_DIR/$FILENAME-build-target" || true # when forcing a reconfigure
     mkdir -p "$SRC_DIR/$FILENAME-build-target"
@@ -60,28 +63,34 @@ if [ -z "$STEP" ] || [ $STEP == 2 ]; then
       CFLAGS=" -I$incl -I$incl/harfbuzz -I$incl/fontconfig -I$incl/freetype2 \
              -I$incl/openssl -I$incl/textstyle \
              -I$incl/postgresql/internal -I$incl/postgresql/server \
-             -I$incl/unixODBC \
+             -I$incl/unixODBC -I$incl/mysql -I$incl/fontconfig \
+             -I$incl/freetype2 -I$incl/harfbuzz -I$incl/textstyle \
              -I$incl/unicode -I$incl/lzma -I$incl/readline" \
       LDFLAGS="-L$USR_DIR/lib" \
       -prefix $USR_DIR \
       -sysroot $TARGET_DIR \
-      -qt-host-path $CROSS_DIR/host/qt6 \
+      -qt-host-path $CROSS_DIR/host \
       -extprefix $USR_DIR/qt6 \
       -debug-and-release \
       -system-pcre \
       -enable-icu \
-      -system-zlib \
+      -qt-zlib \
       -enable-ssl \
       -openssl-runtime \
-      -enable-cups \
-      -qt-freetype \
+      -system-freetype \
       -system-harfbuzz \
       -system-libpng \
       -system-libjpeg \
       -qt-sqlite \
       -enable-gif \
+      -enable-webengine-spellchecker \
+      -enable-webengine-native-spellchecker \
+      -enable-webengine-proprietary-codecs \
+      -enable-webengine-webrtc \
       -- \
         -DCMAKE_TOOLCHAIN_FILE=$CROSS_DIR/make-qt6-toolchain.cmake
+
+      # -enable-cups \
 
       failOnConfigure $?
   else

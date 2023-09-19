@@ -4,11 +4,47 @@ SRC_DIR=$CROSS_DIR/src
 TARGET_DIR=/opt/osxcross/target
 USR_DIR=$TARGET_DIR/usr
 
+# search for include headers in these paths
+# gets set later automatically by this script
+USR_INCLUDES=
+SDK_INCLUDES=
+INCLUDES=
+# search for libs in these paths
+# gets set later automatically by this script
+USR_LIB_PATHS=
+SDK_LIB_PATHS=
+LIB_PATHS=
+
 # read command lines
 source getopt.sh
 
 # the architecture
 source config.sh
+
+searchDirs() {
+  # arg1 = resulting variable
+  # arg2 = root dir to scan
+  # arg3 = pad with
+  local __resultvar = $1
+  local paths=""
+  for dir in $(ls -d $2/*/); do
+    paths+="${3}$dir "
+  done
+
+  eval $__resultvar="'$paths'"
+}
+
+# set include and lib paths
+scanDirs() {
+  searchDirs USR_INCLUDES "$USR_DIR/include" "-I"
+  searchDirs SDK_INCLUDES "$SDK_DIR/usr/include" "-I"
+  INCLUDES="$USR_INCLUDES $SDK_INCLUDES"
+
+  searchDirs USR_LIB_PATHS "$USR_DIR/lib" "-L"
+  searchDirs SDK_LIB_PATHS "$SDK_DIR/usr/lib"
+  LIB_PATHS="$USR_LIB_PATHS $SDK_LIB_PATHS"
+}
+scanDirs
 
 validate_md5sum() {
   # arg1 = path, arg2 = chksum
@@ -84,18 +120,15 @@ else
   exit 1
 fi
 
-if [ ! -z "$PATCH_FILE" ]; then
-  echo "Patching $FILENAME with $PATCH_FILE"
-  if [ -d "$SRC_DIR/$FILENAME" ]; then
-    # remove old and re-patch
-    rm -Rf "$SRC_DIR/$FILENAME"
-  fi
+if [ ! -d "$SRC_DIR/$FILENAME" ]; then
   extract
 
-  curdir=$(pwd)
-  cd "$SRC_DIR/$FILENAME"
-  patch -s -p1 < "$CROSS_DIR/$PATCH_FILE"
-  cd "$curdir"
-elif [ ! -d "$SRC_DIR/$FILENAME" ]; then
-  extract
+  if [ ! -z "$PATCH_FILE" ]; then
+    echo "Patching $FILENAME with $PATCH_FILE"
+
+    curdir=$(pwd)
+    cd "$SRC_DIR/$FILENAME"
+    patch -s -p1 < "$CROSS_DIR/$PATCH_FILE"
+    cd "$curdir"
+  fi
 fi

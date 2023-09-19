@@ -16,6 +16,8 @@ cd src/$FILENAME
 
 
 if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
+  autoreconf && automake --add-missing --copy --force-missing
+
   ./configure \
     --host=$COMPILER_HOST \
     --with-sysroot=$TARGET_DIR \

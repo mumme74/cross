@@ -1,0 +1,9 @@
+# testing: ./buildDocker.sh -f Dockerfile.common.test -a x86_64  -t test
+FROM ubuntu:latest
+ENTRYPOINT ["/bin/bash"]
+
+RUN echo "echo 'Testing --**REPLACE**--'" > $HOME/test.sh && \
+    chmod +x $HOME/test.sh && \
+    exit 0
+
+RUN $HOME/test.sh && exit 0

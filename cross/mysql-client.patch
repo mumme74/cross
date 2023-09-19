@@ -1,0 +1,599 @@
+diff -ur mysql-8.1.0-orig/client/base/abstract_string_option.h mysql-8.1.0/client/base/abstract_string_option.h
+--- mysql-8.1.0-orig/client/base/abstract_string_option.h       2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/client/base/abstract_string_option.h    2023-09-19 20:01:05.604678858 +0000
+@@ -87,9 +87,9 @@
+ template <typename T_type>
+ T_type *Abstract_string_option<T_type>::set_value(std::string value) {
+   *this->m_destination_value = std::optional<std::string>(value);
+-  this->m_original_value = this->m_destination_value->value().c_str();
++  this->m_original_value = (*this->m_destination_value)->c_str();
+   this->m_option_structure.def_value =
+-      (uint64)this->m_destination_value->value().c_str();
++      (uint64)(*this->m_destination_value)->c_str();
+   return (T_type *)this;
+ }
+
+diff -ur mysql-8.1.0-orig/client/base/mysql_connection_options.cc mysql-8.1.0/client/base/mysql_connection_options.cc
+--- mysql-8.1.0-orig/client/base/mysql_connection_options.cc    2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/client/base/mysql_connection_options.cc 2023-09-19 19:54:26.710350285 +0000
+@@ -162,7 +162,7 @@
+
+   if (this->m_compress_algorithm.has_value())
+     mysql_options(connection, MYSQL_OPT_COMPRESSION_ALGORITHMS,
+-                  this->m_compress_algorithm.value().c_str());
++                  this->m_compress_algorithm->c_str());
+
+   mysql_options(connection, MYSQL_OPT_ZSTD_COMPRESSION_LEVEL,
+                 &this->m_zstd_compress_level);
+@@ -174,25 +174,25 @@
+     mysql_options(connection, MYSQL_OPT_PROTOCOL, (char *)&this->m_protocol);
+   if (this->m_bind_addr.has_value())
+     mysql_options(connection, MYSQL_OPT_BIND,
+-                  this->m_bind_addr.value().c_str());
++                  this->m_bind_addr->c_str());
+ #if defined(_WIN32)
+   if (this->m_shared_memory_base_name.has_value())
+     mysql_options(connection, MYSQL_SHARED_MEMORY_BASE_NAME,
+-                  this->m_shared_memory_base_name.value().c_str());
++                  this->m_shared_memory_base_name->c_str());
+ #endif
+   if (this->m_default_charset.has_value()) {
+     mysql_options(connection, MYSQL_SET_CHARSET_NAME,
+-                  this->m_default_charset.value().c_str());
++                  this->m_default_charset->c_str());
+   } else {
+     mysql_options(connection, MYSQL_SET_CHARSET_NAME, "utf8mb4");
+   }
+   if (this->m_plugin_dir.has_value())
+     mysql_options(connection, MYSQL_PLUGIN_DIR,
+-                  this->m_plugin_dir.value().c_str());
++                  this->m_plugin_dir->c_str());
+
+   if (this->m_default_auth.has_value())
+     mysql_options(connection, MYSQL_DEFAULT_AUTH,
+-                  this->m_default_auth.value().c_str());
++                  this->m_default_auth->c_str());
+
+   mysql_options(connection, MYSQL_OPT_CONNECT_ATTR_RESET, nullptr);
+   mysql_options4(connection, MYSQL_OPT_CONNECT_ATTR_ADD, "program_name",
+@@ -200,7 +200,7 @@
+
+   if (this->m_server_public_key.has_value())
+     set_server_public_key(connection,
+-                          this->m_server_public_key.value().c_str());
++                          this->m_server_public_key->c_str());
+
+   if (this->m_get_server_public_key)
+     set_get_server_public_key_option(connection,
+@@ -236,7 +236,7 @@
+
+ CHARSET_INFO *Mysql_connection_options::get_current_charset() const {
+   return m_default_charset.has_value()
+-             ? get_charset_by_csname(m_default_charset.value().c_str(),
++             ? get_charset_by_csname(m_default_charset->c_str(),
+                                      MY_CS_PRIMARY, MYF(MY_WME))
+              : nullptr;
+ }
+@@ -248,7 +248,7 @@
+ const char *Mysql_connection_options::get_null_or_string(
+     std::optional<string> &maybe_string) {
+   if (maybe_string.has_value()) {
+-    return maybe_string.value().c_str();
++    return maybe_string->c_str();
+   } else {
+     return nullptr;
+   }
+@@ -263,7 +263,7 @@
+
+ void Mysql_connection_options::protocol_callback(char *not_used
+                                                  [[maybe_unused]]) {
+-  this->m_protocol = find_type_or_exit(this->m_protocol_string.value().c_str(),
++  this->m_protocol = find_type_or_exit(this->m_protocol_string->c_str(),
+                                        &sql_protocol_typelib, "protocol");
+ }
+
+diff -ur mysql-8.1.0-orig/client/dump/abstract_mysql_chain_element_extension.cc mysql-8.1.0/client/dump/abstract_mysql_chain_element_extension.cc
+--- mysql-8.1.0-orig/client/dump/abstract_mysql_chain_element_extension.cc      2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/client/dump/abstract_mysql_chain_element_extension.cc   2023-09-19 20:05:37.644113565 +0000
+@@ -112,16 +112,16 @@
+           this->quote_name(database_name) + "." + object_name;
+       std::string obj_name_with_quote =
+           this->quote_name(database_name) + "." + this->quote_name(object_name);
+-      size_t pos1 = res.value().find(obj_name_without_quote);
+-      size_t pos2 = res.value().find(obj_name_with_quote);
++      size_t pos1 = res->find(obj_name_without_quote);
++      size_t pos2 = res->find(obj_name_with_quote);
+
+       // if object name does not have db name then include it
+       if (pos1 == std::string::npos && pos2 == std::string::npos) {
+-        size_t pos = res.value().find(object_type);
++        size_t pos = res->find(object_type);
+         if (pos != std::string::npos) {
+           pos = pos + object_type.size() + 1;
+-          res = res.value().substr(0, pos) + this->quote_name(database_name) +
+-                "." + res.value().substr(pos);
++          res = res->substr(0, pos) + this->quote_name(database_name) +
++                "." + res->substr(pos);
+         }
+       }
+     }
+diff -ur mysql-8.1.0-orig/client/dump/mysql_crawler.cc mysql-8.1.0/client/dump/mysql_crawler.cc
+--- mysql-8.1.0-orig/client/dump/mysql_crawler.cc       2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/client/dump/mysql_crawler.cc    2023-09-19 20:11:29.525780174 +0000
+@@ -116,7 +116,7 @@
+     if (!stmt.has_value()) continue;  // some error occurred
+
+     Database *database =
+-        new Database(this->generate_new_object_id(), db_name, stmt.value());
++        new Database(this->generate_new_object_id(), db_name, *stmt);
+     m_current_database_start_dump_task = new Database_start_dump_task(database);
+     Abstract_data_object *db_object = dynamic_cast<Abstract_data_object *>(
+         m_current_database_start_dump_task->get_related_db_object());
+@@ -283,7 +283,7 @@
+         this->get_create_statement(runner, db.get_name(), table_name, "TABLE");
+     if (!stmt.has_value()) continue;  // some error occurred
+     Table *table = new Table(this->generate_new_object_id(), table_name,
+-                             db.get_name(), stmt.value(), fields, table_data[1],
++                             db.get_name(), *stmt, fields, table_data[1],
+                              rows, (uint64)(rows * (isInnoDB ? 1.5 : 1)),
+                              atoll(table_data[6].c_str())  // "Data_length"
+     );
+@@ -370,7 +370,7 @@
+         }
+
+         View *view = new View(this->generate_new_object_id(), table_name,
+-                              db.get_name(), stmt.value());
++                              db.get_name(), *stmt);
+         m_current_database_end_dump_task->add_dependency(view);
+         view->add_dependency(m_tables_definition_ready_dump_task);
+         this->process_dump_task(view);
+@@ -406,7 +406,7 @@
+
+     TObject *function = new TObject(
+         this->generate_new_object_id(), function_row[1], db.get_name(),
+-        "DELIMITER //\n" + stmt.value() + "//\n" + "DELIMITER ;\n");
++        "DELIMITER //\n" + (*stmt) + "//\n" + "DELIMITER ;\n");
+
+     function->add_dependency(m_current_database_start_dump_task);
+     m_current_database_end_dump_task->add_dependency(function);
+@@ -447,7 +447,7 @@
+
+     Event_scheduler_event *event = new Event_scheduler_event(
+         this->generate_new_object_id(), event_row[1], db.get_name(),
+-        "DELIMITER //\n" + stmt.value() + "//\n" + "DELIMITER ;\n");
++        "DELIMITER //\n" + (*stmt) + "//\n" + "DELIMITER ;\n");
+
+     event->add_dependency(m_current_database_start_dump_task);
+     m_current_database_end_dump_task->add_dependency(event);
+@@ -539,7 +539,7 @@
+     Trigger *trigger = new Trigger(
+         this->generate_new_object_id(), trigger_row[0], table.get_schema(),
+         "DELIMITER //\n" +
+-            this->get_version_specific_statement(stmt.value(), "TRIGGER",
++            this->get_version_specific_statement((*stmt), "TRIGGER",
+                                                  "50017", "50003") +
+             "\n//\n" + "DELIMITER ;\n",
+         &table);
+diff -ur mysql-8.1.0-orig/client/dump/mysqldump_tool_chain_maker.cc mysql-8.1.0/client/dump/mysqldump_tool_chain_maker.cc
+--- mysql-8.1.0-orig/client/dump/mysqldump_tool_chain_maker.cc  2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/client/dump/mysqldump_tool_chain_maker.cc       2023-09-19 20:14:13.326734185 +0000
+@@ -67,7 +67,7 @@
+     if (m_options->m_result_file.has_value())
+       writer = new File_writer(this->get_message_handler(),
+                                this->get_object_id_generator(),
+-                               m_options->m_result_file.value());
++                               *m_options->m_result_file);
+     else
+       writer = new Standard_writer(this->get_message_handler(),
+                                    this->get_object_id_generator());
+@@ -78,7 +78,7 @@
+     m_all_created_elements.push_back(writer);
+     if (m_options->m_compress_output_algorithm.has_value()) {
+       std::string algorithm_name =
+-          m_options->m_compress_output_algorithm.value();
++          *m_options->m_compress_output_algorithm;
+       boost::to_lower(algorithm_name);
+
+       Abstract_output_writer_wrapper *compression_writer_as_wrapper = nullptr;
+diff -ur mysql-8.1.0-orig/client/dump/mysqldump_tool_chain_maker_options.cc mysql-8.1.0/client/dump/mysqldump_tool_chain_maker_options.cc
+--- mysql-8.1.0-orig/client/dump/mysqldump_tool_chain_maker_options.cc  2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/client/dump/mysqldump_tool_chain_maker_options.cc       2023-09-19 20:15:33.985219081 +0000
+@@ -37,7 +37,7 @@
+
+ void Mysqldump_tool_chain_maker_options::parallel_schemas_callback(char *) {
+   std::vector<std::string> schemas;
+-  std::istringstream schema_stream(m_parallel_schemas_string.value());
++  std::istringstream schema_stream(*m_parallel_schemas_string);
+   for (std::string schema; std::getline(schema_stream, schema, ',');)
+     schemas.push_back(schema);
+   if (schemas.size() == 0) return;
+diff -ur mysql-8.1.0-orig/client/dump/object_filter.cc mysql-8.1.0/client/dump/object_filter.cc
+--- mysql-8.1.0-orig/client/dump/object_filter.cc       2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/client/dump/object_filter.cc    2023-09-19 20:16:50.315777771 +0000
+@@ -97,14 +97,14 @@
+     std::vector<std::pair<std::string, std::string>> &list,
+     bool allow_schema /*= true*/, bool is_user_object) {
+   std::string err;
+-  err = parse_inclusion_string(m_include_tmp_string.value(), list, allow_schema,
++  err = parse_inclusion_string(*m_include_tmp_string, list, allow_schema,
+                                is_user_object);
+   if (err.length() > 0)
+     m_program->error(Mysql::Tools::Base::Message_data(
+         1,
+         "Failed to parse --include -<type> or"
+         "--exclude-<type> argument \"" +
+-            m_include_tmp_string.value() + "\": " + err,
++            (*m_include_tmp_string) + "\": " + err,
+         Mysql::Tools::Base::Message_type_error));
+ }
+
+diff -ur mysql-8.1.0-orig/client/dump/program.cc mysql-8.1.0/client/dump/program.cc
+--- mysql-8.1.0-orig/client/dump/program.cc     2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/client/dump/program.cc  2023-09-19 20:18:23.542009100 +0000
+@@ -49,12 +49,12 @@
+ void Program::error_log_file_callback(char *) {
+   if (!m_error_log_file.has_value()) return;
+   this->close_redirected_stderr();
+-  m_stderr = freopen(m_error_log_file.value().c_str(), "a", stderr);
++  m_stderr = freopen(m_error_log_file->c_str(), "a", stderr);
+   if (m_stderr == nullptr) {
+     this->error(Mysql::Tools::Base::Message_data(
+         errno,
+         "Cannot append error log to specified file: \"" +
+-            m_error_log_file.value() + "\"",
++            (*m_error_log_file) + "\"",
+         Mysql::Tools::Base::Message_type_error));
+   }
+ }
+diff -ur mysql-8.1.0-orig/cmake/libevent.cmake mysql-8.1.0/cmake/libevent.cmake
+--- mysql-8.1.0-orig/cmake/libevent.cmake       2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/cmake/libevent.cmake    2023-09-17 23:14:51.143331231 +0000
+@@ -61,43 +61,62 @@
+ ENDMACRO()
+
+ FUNCTION(FIND_LIBEVENT_VERSION LIBEVENT_INCLUDE_DIRS)
+-  SET(TEST_SRC
+-    "#include <event.h>
+-     #include <stdio.h>
+-    int main()
+-    {
+-      fprintf(stdout, \"%s\", LIBEVENT_VERSION);
+-    }
+-    "
+-    )
+-  FILE(WRITE
+-    "${CMAKE_BINARY_DIR}/find_libevent_version.c"
+-    "${TEST_SRC}"
+-    )
+-  TRY_RUN(TEST_RUN_RESULT COMPILE_TEST_RESULT
+-    ${CMAKE_BINARY_DIR}
+-    "${CMAKE_BINARY_DIR}/find_libevent_version.c"
+-    CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${LIBEVENT_INCLUDE_DIRS}"
+-    COMPILE_OUTPUT_VARIABLE OUTPUT
+-    RUN_OUTPUT_VARIABLE RUN_OUTPUT
+-    )
+-  # MESSAGE(STATUS "TRY_EVENT TEST_RUN_RESULT is ${TEST_RUN_RESULT}")
+-  # MESSAGE(STATUS "TRY_EVENT COMPILE_TEST_RESULT is ${COMPILE_TEST_RESULT}")
+-  # MESSAGE(STATUS "TRY_EVENT COMPILE_OUTPUT_VARIABLE is ${OUTPUT}")
+-  # MESSAGE(STATUS "TRY_EVENT RUN_OUTPUT_VARIABLE is ${RUN_OUTPUT}")
+-
+-  IF(COMPILE_TEST_RESULT)
+-    SET(LIBEVENT_VERSION_STRING "${RUN_OUTPUT}")
+-    STRING(REGEX REPLACE
+-      "([.-0-9]+).*" "\\1" LIBEVENT_VERSION "${LIBEVENT_VERSION_STRING}")
+-    SET(LIBEVENT_VERSION ${LIBEVENT_VERSION} CACHE INTERNAL "" FORCE)
+-  ELSE()
++  # enable cross-compile
++  IF (NOT LIBEVENT_INCLUDE_DIRECTORY)
++    FIND_PATH(LIBEVENT_INCLUDE_DIRECTORY event.h PATHS ${LIBEVENT_INCLUDE_DIRS})
++  ENDIF()
++  FILE(READ "${LIBEVENT_INCLUDE_DIRECTORY}/event.h" event)
++  STRING(REGEX MATCH "#include <(.*/event-config.h)>" _  ${event})
++  IF(EXISTS "${LIBEVENT_INCLUDE_DIRECTORY}/${CMAKE_MATCH_1}")
++    FILE(READ "${LIBEVENT_INCLUDE_DIRECTORY}/${CMAKE_MATCH_1}" config)
++    STRING(REGEX MATCH "EVENT__VERSION\\s+\"([^\"]+)\"" _ ${config})
++    SET(LIBEVENT_VERSION ${CMAKE_MATCH_1})
++    UNSET(config)
++  ENDIF()
++  UNSET(event)
++
++  IF (NOT LIBEVENT_VERSION)
++    SET(TEST_SRC
++      "#include <event.h>
++       #include <stdio.h>
++      int main()
++      {
++        fprintf(stdout, \"%s\", LIBEVENT_VERSION);
++      }
++      "
++      )
++    FILE(WRITE
++      "${CMAKE_BINARY_DIR}/find_libevent_version.c"
++      "${TEST_SRC}"
++      )
++    TRY_RUN(TEST_RUN_RESULT COMPILE_TEST_RESULT
++      ${CMAKE_BINARY_DIR}
++      "${CMAKE_BINARY_DIR}/find_libevent_version.c"
++      CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${LIBEVENT_INCLUDE_DIRS}"
++      COMPILE_OUTPUT_VARIABLE OUTPUT
++      RUN_OUTPUT_VARIABLE RUN_OUTPUT
++      )
++    # MESSAGE(STATUS "TRY_EVENT TEST_RUN_RESULT is ${TEST_RUN_RESULT}")
++    # MESSAGE(STATUS "TRY_EVENT COMPILE_TEST_RESULT is ${COMPILE_TEST_RESULT}")
++    # MESSAGE(STATUS "TRY_EVENT COMPILE_OUTPUT_VARIABLE is ${OUTPUT}")
++    # MESSAGE(STATUS "TRY_EVENT RUN_OUTPUT_VARIABLE is ${RUN_OUTPUT}")
++
++    IF(COMPILE_TEST_RESULT AND RUN_OUTPUT)
++      SET(LIBEVENT_VERSION_STRING "${RUN_OUTPUT}")
++      STRING(REGEX REPLACE
++        "([.-0-9]+).*" "\\1" LIBEVENT_VERSION "${LIBEVENT_VERSION_STRING}")
++      SET(LIBEVENT_VERSION ${LIBEVENT_VERSION} CACHE INTERNAL "" FORCE)
++    ENDIF()
++  ENDIF()
++
++  IF (NOT LIBEVENT_VERSION)
+     MESSAGE(WARNING "Could not determine LIBEVENT_VERSION")
++  ELSE()
++    MESSAGE(STATUS "LIBEVENT_VERSION (${WITH_LIBEVENT}) ${LIBEVENT_VERSION}")
++    MESSAGE(STATUS "LIBEVENT_INCLUDE_DIRS ${LIBEVENT_INCLUDE_DIRS}")
++    MESSAGE(STATUS "LIBEVENT_LIBRARIES ${LIBEVENT_LIBRARIES}")
+   ENDIF()
+
+-  MESSAGE(STATUS "LIBEVENT_VERSION (${WITH_LIBEVENT}) ${LIBEVENT_VERSION}")
+-  MESSAGE(STATUS "LIBEVENT_INCLUDE_DIRS ${LIBEVENT_INCLUDE_DIRS}")
+-  MESSAGE(STATUS "LIBEVENT_LIBRARIES ${LIBEVENT_LIBRARIES}")
+ ENDFUNCTION(FIND_LIBEVENT_VERSION)
+
+ FUNCTION(FIND_SYSTEM_LIBEVENT)
+diff -ur mysql-8.1.0-orig/cmake/libutils.cmake mysql-8.1.0/cmake/libutils.cmake
+--- mysql-8.1.0-orig/cmake/libutils.cmake       2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/cmake/libutils.cmake    2023-09-19 19:21:18.691996704 +0000
+@@ -18,8 +18,7 @@
+ #
+ # You should have received a copy of the GNU General Public License
+ # along with this program; if not, write to the Free Software
+-# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
+-
++# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
+
+ # This file exports macros that emulate some functionality found  in GNU libtool
+ # on Unix systems. One such feature is convenience libraries. In this context,
+@@ -179,7 +178,7 @@
+   SET(SOURCES ${ARG_UNPARSED_ARGUMENTS})
+
+   # For APPLE, we create a STATIC library only,
+-  IF(APPLE)
++  IF(APPLE AND NOT CMAKE_CROSSCOMPILING)
+     SET(TARGET_LIB ${TARGET})
+     ADD_LIBRARY(${TARGET} STATIC ${SOURCES})
+   ELSE()
+@@ -513,7 +512,7 @@
+   # For Xcode the merging of TARGET_OBJECTS does not work.
+   # Rather than having a special implementation for Xcode only,
+   # we always use libtool directly for merging libraries.
+-  IF(APPLE)
++  IF(APPLE AND NOT CMAKE_CROSSCOMPILING)
+     SET(STATIC_LIBS_STRING)
+     FOREACH(LIB ${MYLIBS})
+       STRING_APPEND(STATIC_LIBS_STRING " $<TARGET_FILE:${LIB}>")
+diff -ur mysql-8.1.0-orig/cmake/os/Darwin.cmake mysql-8.1.0/cmake/os/Darwin.cmake
+--- mysql-8.1.0-orig/cmake/os/Darwin.cmake      2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/cmake/os/Darwin.cmake   2023-09-18 19:44:00.464972724 +0000
+@@ -31,13 +31,19 @@
+ # We require at least XCode 10.0
+ IF(NOT FORCE_UNSUPPORTED_COMPILER)
+   IF(MY_COMPILER_IS_CLANG)
+-    CHECK_C_SOURCE_RUNS("
+-      int main()
+-      {
+-        return (__clang_major__ < 10);
+-      }" HAVE_SUPPORTED_CLANG_VERSION)
+-    IF(NOT HAVE_SUPPORTED_CLANG_VERSION)
+-      MESSAGE(FATAL_ERROR "XCode 10.0 or newer is required!")
++    IF (CMAKE_C_COMPILER_VERSION)
++      IF ("10" GREATER "${CMAKE_C_COMPILER_VERSION}")
++        MESSAGE(FATAL_ERROR "Clang 10.0 or newer is required!")
++      ENDIF()
++    ELSE()
++      CHECK_C_SOURCE_RUNS("
++        int main()
++        {
++          return (__clang_major__ < 10);
++        }" HAVE_SUPPORTED_CLANG_VERSION)
++      IF(NOT HAVE_SUPPORTED_CLANG_VERSION)
++        MESSAGE(FATAL_ERROR "XCode 10.0 or newer is required!")
++      ENDIF()
+     ENDIF()
+   ELSE()
+     MESSAGE(FATAL_ERROR "Unsupported compiler!")
+@@ -67,7 +73,7 @@
+ #
+ # To get a clean build, use 'ar' and ensure all source files are non-empty.
+ # Use this by default for Ninja and Makefiles.
+-IF(APPLE_XCODE)
++IF(APPLE_XCODE AND NOT CMAKE_CROSSCOMPILATION)
+   SET(WITH_LIBTOOL_DEFAULT ON)
+ ELSE()
+   SET(WITH_LIBTOOL_DEFAULT OFF)
+@@ -85,8 +91,8 @@
+ ELSE()
+   # This did not fix the "library.a(filename.cc.o) has no symbols" warnings.
+   # 'ranlib' has the -no_warning_for_no_symbols option, but 'ar' does not.
+-  # STRING(REPLACE "<CMAKE_RANLIB>" "<CMAKE_RANLIB> -no_warning_for_no_symbols"
+-  #   CMAKE_C_ARCHIVE_FINISH "${CMAKE_C_ARCHIVE_FINISH}")
+-  # STRING(REPLACE "<CMAKE_RANLIB>" "<CMAKE_RANLIB> -no_warning_for_no_symbols"
+-  #   CMAKE_CXX_ARCHIVE_FINISH "${CMAKE_CXX_ARCHIVE_FINISH}")
++  STRING(REPLACE "<CMAKE_RANLIB>" "<CMAKE_RANLIB> -no_warning_for_no_symbols"
++     CMAKE_C_ARCHIVE_FINISH "${CMAKE_C_ARCHIVE_FINISH}")
++   STRING(REPLACE "<CMAKE_RANLIB>" "<CMAKE_RANLIB> -no_warning_for_no_symbols"
++     CMAKE_CXX_ARCHIVE_FINISH "${CMAKE_CXX_ARCHIVE_FINISH}")
+ ENDIF()
+Only in mysql-8.1.0: downloads
+diff -ur mysql-8.1.0-orig/libmysql/CMakeLists.txt mysql-8.1.0/libmysql/CMakeLists.txt
+--- mysql-8.1.0-orig/libmysql/CMakeLists.txt    2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/libmysql/CMakeLists.txt 2023-09-19 18:45:43.039253226 +0000
+@@ -434,13 +434,15 @@
+     )
+ ENDIF()
+
+-# Verify that libmysql_api_test runs OK
+-ADD_CUSTOM_COMMAND(
+-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libmysql_api_test.out
+-  DEPENDS libmysql_api_test
+-  COMMAND libmysql_api_test
+-  > ${CMAKE_CURRENT_BINARY_DIR}/libmysql_api_test.out
+-  )
+-MY_ADD_CUSTOM_TARGET(run_libmysql_api_test ALL
+-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/libmysql_api_test.out
+-  )
++IF(NOT CMAKE_CROSSCOMPILING)
++  # Verify that libmysql_api_test runs OK
++  ADD_CUSTOM_COMMAND(
++    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libmysql_api_test.out
++    DEPENDS libmysql_api_test
++    COMMAND libmysql_api_test
++    > ${CMAKE_CURRENT_BINARY_DIR}/libmysql_api_test.out
++    )
++  MY_ADD_CUSTOM_TARGET(run_libmysql_api_test ALL
++    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/libmysql_api_test.out
++    )
++ENDIF()
+diff -ur mysql-8.1.0-orig/scripts/CMakeLists.txt mysql-8.1.0/scripts/CMakeLists.txt
+--- mysql-8.1.0-orig/scripts/CMakeLists.txt     2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/scripts/CMakeLists.txt  2023-09-18 01:03:38.729461952 +0000
+@@ -24,7 +24,14 @@
+
+ ADD_SUBDIRECTORY(sys_schema)
+
+-MYSQL_ADD_EXECUTABLE(comp_sql comp_sql.cc SKIP_INSTALL)
++IF(NOT CMAKE_CROSSCOMPILING)
++  MYSQL_ADD_EXECUTABLE(comp_sql comp_sql.cc SKIP_INSTALL)
++  EXPORT(TARGETS comp_sql FILE ${CMAKE_BINARY_DIR}/ImportCompSql.cmake)
++ELSE()
++  SET(IMPORT_COMP_SQL "IMPORTFILE-NOTFOUND"
++  CACHE FILEPATH "Point it to the export file from a native build")
++  INCLUDE(${HOST_BUILD_DIR}/ImportCompSql.cmake)
++ENDIF()
+
+ # Add compiler information, for easier debugging of output from mysql_config.
+ SET(COMPILER_ID_AND_VERSION
+diff -ur mysql-8.1.0-orig/scripts/sys_schema/CMakeLists.txt mysql-8.1.0/scripts/sys_schema/CMakeLists.txt
+--- mysql-8.1.0-orig/scripts/sys_schema/CMakeLists.txt  2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/scripts/sys_schema/CMakeLists.txt       2023-09-18 01:03:09.837917671 +0000
+@@ -20,6 +20,11 @@
+ # along with this program; if not, write to the Free Software
+ # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
+
++IF(CMAKE_CROSSCOMPILING)
++  SET(IMPORT_COMP_SQL "IMPORTFILE-NOTFOUND"
++  CACHE FILEPATH "Point it to the export file from a native build")
++  INCLUDE(${HOST_BUILD_DIR}/ImportCompSql.cmake)
++ENDIF(CMAKE_CROSSCOMPILING)
+
+ SET(SYS_SCHEMA_SOURCES
+   before_setup.sql
+@@ -188,7 +193,6 @@
+   after_setup.sql
+   )
+
+-
+ ADD_CUSTOM_COMMAND(
+   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ALL_SYS_SCHEMA.sql
+   COMMAND ${CMAKE_COMMAND}
+@@ -204,7 +208,6 @@
+ MY_ADD_CUSTOM_TARGET(all_sys_schema
+   DEPENDS ALL_SYS_SCHEMA.sql)
+
+-
+ ADD_CUSTOM_COMMAND(
+   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/sql_commands.h
+   COMMAND comp_sql
+@@ -232,4 +235,3 @@
+     DEPENDS sql_commands
+   )
+ ENDIF()
+-
+diff -ur mysql-8.1.0-orig/strings/CMakeLists.txt mysql-8.1.0/strings/CMakeLists.txt
+--- mysql-8.1.0-orig/strings/CMakeLists.txt     2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/strings/CMakeLists.txt  2023-09-18 06:20:37.603575229 +0000
+@@ -56,11 +56,18 @@
+   xml.cc
+ )
+
+-MYSQL_ADD_EXECUTABLE(uca9dump uca9-dump.cc SKIP_INSTALL)
++IF(NOT CMAKE_CROSSCOMPILING)
++  MYSQL_ADD_EXECUTABLE(uca9dump uca9-dump.cc SKIP_INSTALL)
+
+-MY_CHECK_CXX_COMPILER_WARNING("-Wmissing-profile" HAS_MISSING_PROFILE)
+-IF(HAS_MISSING_PROFILE)
+-  ADD_COMPILE_FLAGS(uca9-dump.cc COMPILE_FLAGS ${HAS_MISSING_PROFILE})
++  MY_CHECK_CXX_COMPILER_WARNING("-Wmissing-profile" HAS_MISSING_PROFILE)
++  IF(HAS_MISSING_PROFILE)
++    ADD_COMPILE_FLAGS(uca9-dump.cc COMPILE_FLAGS ${HAS_MISSING_PROFILE})
++  ENDIF()
++  EXPORT(TARGETS uca9dump FILE ${CMAKE_BINARY_DIR}/ImportUca9dump.cmake)
++ELSE()
++  SET(IMPORT_UCA9DUMP "IMPORTFILE-NOTFOUND"
++  CACHE FILEPATH "Point it to the export file from a native build")
++  INCLUDE(${HOST_BUILD_DIR}/ImportUca9dump.cmake)
+ ENDIF()
+
+ SET(ZH_HANS_SRC_FILE ${CMAKE_SOURCE_DIR}/strings/lang_data/zh_hans.txt)
+@@ -132,9 +139,17 @@
+     )
+ ENDIF()
+
+-MYSQL_ADD_EXECUTABLE(conf_to_src conf_to_src.cc SKIP_INSTALL)
+-TARGET_LINK_LIBRARIES(conf_to_src strings)
++IF(NOT CMAKE_CROSSCOMPILING)
++  MYSQL_ADD_EXECUTABLE(conf_to_src conf_to_src.cc SKIP_INSTALL)
++  TARGET_LINK_LIBRARIES(conf_to_src strings)
++
++  IF(HAS_MISSING_PROFILE)
++    ADD_COMPILE_FLAGS(conf_to_src.cc COMPILE_FLAGS ${HAS_MISSING_PROFILE})
++  ENDIF()
+
+-IF(HAS_MISSING_PROFILE)
+-  ADD_COMPILE_FLAGS(conf_to_src.cc COMPILE_FLAGS ${HAS_MISSING_PROFILE})
++  EXPORT(TARGETS conf_to_src FILE ${CMAKE_BINARY_DIR}/ImportConfToSource.cmake)
++ELSE()
++  SET(IMPORT_CONF_TO_SRC "IMPORTFILE-NOTFOUND"
++  CACHE FILEPATH "Point it to the export file from a native build")
++  INCLUDE(${HOST_BUILD_DIR}/ImportConfToSource.cmake)
+ ENDIF()
+diff -ur mysql-8.1.0-orig/utilities/CMakeLists.txt mysql-8.1.0/utilities/CMakeLists.txt
+--- mysql-8.1.0-orig/utilities/CMakeLists.txt   2023-06-21 07:52:10.000000000 +0000
++++ mysql-8.1.0/utilities/CMakeLists.txt        2023-09-18 06:39:26.682694639 +0000
+@@ -30,14 +30,26 @@
+     COMPONENT Test
+     LINK_LIBRARIES mysys
+     )
++  EXPORT(TARGETS comp_err FILE ${CMAKE_BINARY_DIR}/ImportCompErr.cmake)
++ELSE()
++  SET(IMPORT_COMP_ERR "IMPORTFILE-NOTFOUND"
++  CACHE FILEPATH "Point it to the export file from a native build")
++  INCLUDE(${HOST_BUILD_DIR}/ImportCompErr.cmake)
+ ENDIF()
+
+-MYSQL_ADD_EXECUTABLE(comp_client_err
+-  comp_client_err.cc
+-  ${CMAKE_SOURCE_DIR}/libmysql/errmsg.cc
+-  LINK_LIBRARIES mysys
+-  SKIP_INSTALL
+-  )
++IF(NOT CMAKE_CROSSCOMPILING)
++  MYSQL_ADD_EXECUTABLE(comp_client_err
++    comp_client_err.cc
++    ${CMAKE_SOURCE_DIR}/libmysql/errmsg.cc
++    LINK_LIBRARIES mysys
++    SKIP_INSTALL
++    )
++   EXPORT(TARGETS comp_client_err FILE ${CMAKE_BINARY_DIR}/ImportCompClientErr.cmake)
++ELSE()
++  SET(IMPORT_COMP_CLIENT_ERR "IMPORTFILE-NOTFOUND"
++  CACHE FILEPATH "Point it to the export file from a native build")
++  INCLUDE(${HOST_BUILD_DIR}/ImportCompClientErr.cmake)
++ENDIF()
+
+ ADD_CUSTOM_COMMAND(OUTPUT ${PROJECT_BINARY_DIR}/include/mysqlclient_ername.h
+   COMMAND comp_client_err

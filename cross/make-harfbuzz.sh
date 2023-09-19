@@ -15,6 +15,8 @@ echo "Building $PKG"
 cd src/$FILENAME
 
 if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
+  autoreconf && automake --add-missing --copy --force-missing
+
   CHOST=$COMPILER_HOST \
   ./configure --prefix=$USR_DIR \
     --host=$COMPILER_HOST \

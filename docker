@@ -1,0 +1,8 @@
+FROM ubuntu:latest
+ENTRYPOINT ["/bin/bash"]
+
+RUN echo "echo 'Testing arm64e-apple'" > $HOME/test.sh && \
+    chmod +x $HOME/test.sh && \
+    exit 0
+
+RUN $HOME/test.sh && exit 0
