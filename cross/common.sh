@@ -1,7 +1,7 @@
 #!/bin/bash
-CROSS_DIR=/opt/osxcross/cross
+CROSS_DIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SRC_DIR=$CROSS_DIR/src
-TARGET_DIR=/opt/osxcross/target
+TARGET_DIR="$(dirname "$CROSS_DIR")/target"
 USR_DIR=$TARGET_DIR/usr
 
 # search for include headers in these paths
@@ -15,17 +15,31 @@ USR_LIB_PATHS=
 SDK_LIB_PATHS=
 LIB_PATHS=
 
+# these can be set by build rule before calling start
+HOST_BUILD_DIR=
+HOST_CONFIG_CMD=
+HOST_CONFIG_FN=
+HOST_BUILD_FN=
+HOST_INSTALL_FN=
+TARGET_BUILD_DIR=
+TARGET_CONFIG_CMD=
+TARGET_CONFIG_FN=
+TARGET_BUILD_FN=
+TARGET_INSTALL_FN=
+
+cd "$CROSS_DIR"
+
 # read command lines
-source getopt.sh
+source $(dirname "$0")/getopt.sh
 
 # the architecture
-source config.sh
+source $(dirname "$0")/config.sh
 
 searchDirs() {
   # arg1 = resulting variable
   # arg2 = root dir to scan
   # arg3 = pad with
-  local __resultvar = $1
+  local __resultvar=$1
   local paths=""
   for dir in $(ls -d $2/*/); do
     paths+="${3}$dir "
@@ -44,7 +58,6 @@ scanDirs() {
   searchDirs SDK_LIB_PATHS "$SDK_DIR/usr/lib"
   LIB_PATHS="$USR_LIB_PATHS $SDK_LIB_PATHS"
 }
-scanDirs
 
 validate_md5sum() {
   # arg1 = path, arg2 = chksum
@@ -69,7 +82,7 @@ validate_sha256() {
 extract() {
   curdir=$(pwd)
   cd "$CROSS_DIR"
-  echo "Extracting $TARNAME to src/$FILENAME"
+  echo "Extracting $TARNAME to src/$DIRNAME"
   tar -xf "pkg/$TARNAME" -C src/
   cd "$curdir"
 }
@@ -103,32 +116,179 @@ failOnInstall() {
   failOnError "$1" "Failed to install $PKG"
 }
 
-if [ ! -z ${FORCE+x} ] && [ "$FORCE" == true ]; then
-  echo "Forcing rebuild"
-fi
-
-if [ ! -f "pkg/$TARNAME" ]; then
-  wget -P pkg/ $DOWNLOADURL
-fi
-
-if [ ! -z "$SHA256" ]; then
-  validate_sha256 "pkg/$TARNAME" "$SHA256"
-elif [ ! -z "$MD5SUM" ]; then
-  validate_md5sum "pkg/$TARNAME" "$MD5SUM"
-else
-  echo "Unable to validate $TARNAME"
-  exit 1
-fi
-
-if [ ! -d "$SRC_DIR/$FILENAME" ]; then
-  extract
-
-  if [ ! -z "$PATCH_FILE" ]; then
-    echo "Patching $FILENAME with $PATCH_FILE"
-
-    curdir=$(pwd)
-    cd "$SRC_DIR/$FILENAME"
-    patch -s -p1 < "$CROSS_DIR/$PATCH_FILE"
-    cd "$curdir"
+downloadAndValidate() {
+  if [ ! -f "$CROSS_DIR/pkg/$TARNAME" ]; then
+    wget -P $CROSS_DIR/pkg/ $DOWNLOADURL
   fi
+
+  if [ ! -z "$SHA256" ]; then
+    validate_sha256 "$CROSS_DIR/pkg/$TARNAME" "$SHA256"
+  elif [ ! -z "$MD5SUM" ]; then
+    validate_md5sum "$CROSS_DIR/pkg/$TARNAME" "$MD5SUM"
+  else
+    echo "Unable to validate $TARNAME"
+    exit 1
+  fi
+}
+
+extractAndPatch() {
+  if [ ! -d "$SRC_DIR/$DIRNAME" ]; then
+    extract
+
+    if [ ! -z "$PATCH_FILE" ]; then
+      echo "Patching $DIRNAME with $PATCH_FILE"
+
+      cd "$SRC_DIR/$DIRNAME"
+      patch -s -p1 < "$CROSS_DIR/$PATCH_FILE"
+    fi
+  fi
+}
+
+defaultConfigFn() {
+  local srcDir=$1
+  local buildDir=$2
+  local configCmd=$3
+
+  cd $buildDir
+
+  if [ "${configCmd:0:9}" == "configure" ]; then
+    [ "$srcDir" != "$buildDir" ] && \
+      configCmd="$srcDir/$configCmd" || \
+       configCmd="./$configCmd"
+  elif [ "${configCmd:0:5}" == "cmake" ]; then
+    [ "$srcDir" != "$buildDir" ] && \
+      configCmd="$configCmd $srcDir" || \
+        configCmd="$configCmd ./"
+  fi
+
+  if [ ! -f "$buildDir/config.log" ]; then
+    echo "configuring $PKG, build dir: $buildDir"
+    echo "configuring $PKG $buildDir"
+    echo "$configCmd"
+    eval "$configCmd" | tee "$buildDir/.config.log"
+    failOnConfigure $?
+
+    if [ ! -f "$buildDir/config.log" ]; then
+      mv $buildDir/.config.log $buildDir/config.log
+    else
+      rm $buildDir/.config.log
+    fi
+  fi
+}
+
+defaultBuildFn() {
+  make --jobs=$(nproc) JOBS=$(nproc)
+  failOnBuild $?
+}
+
+defaultInstallFn() {
+  make install
+  failOnInstall $?
+}
+
+configureAndBuild() {
+  local srcDir=$1
+  local buildDir=$2
+  local configDmd=$3
+  local configFn=$4
+  local buildFn=$5
+  local installFn=$6
+
+  # force rebuild clean
+  if [ "$FORCE" == true ]; then
+    if [ "$buildDir" == "$HOST_BUILD_DIR" ] || \
+       [ "$OUT_OF_SRC_BUILD" == true ]; then
+      rm -rf $buildDir
+    else
+      rm -f $buildDir/config.log
+    fi
+  fi
+
+  mkdir -p $buildDir
+  cd $buildDir
+
+  $configFn "$srcDir" "$buildDir" "$configCmd"
+
+  # build
+  [ -z "$buildFn" ] && defaultBuildFn || $buildFn
+  [ -z "$installFn" ] && defaultInstallFn || $installFn
+}
+
+configureAndBuildHost() {
+  if [ "$HOST_BUILD" == true ]; then
+    echo "---------------------"
+    echo "building host $PKG"
+    local configFn=$HOST_CONFIG_FN
+
+    # select configFn
+    [ -z "$configFn" ] &&
+      configFn=defaultConfigFn
+
+    configureAndBuild \
+      "$SRC_DIR/$DIRNAME" \
+      "$HOST_BUILD_DIR" \
+      "$HOST_CONFIG_CMD" \
+      "$configFn" \
+      "$HOST_BUILD_FN" \
+      "$HOST_INSTALL_FN"
+  fi
+}
+
+configureAndBuildTarget() {
+  echo "---------------------"
+  echo "building target $PKG"
+  local configFn="$TARGET_CONFIG_FN"
+
+  # select configFn
+  [ -z "$configFn" ] && \
+    configFn=defaultConfigFn
+
+  configureAndBuild \
+    "$SRC_DIR/$DIRNAME" \
+    "$TARGET_BUILD_DIR" \
+    "$TARGET_CONFIG_CMD" \
+    "$configFn" \
+    "$TARGET_BUILD_FN" \
+    "$TARGET_INSTALL_FN"
+}
+
+[ -z "$DIRNAME" ] && DIRNAME=$FILENAME
+
+# extract and patch before setting rules
+for st in ${STEP[@]}; do
+  case $st in
+    d) downloadAndValidate;;
+    e) extractAndPatch;;
+  esac
+done
+
+# if only download, we stop here
+if [[ ! ${STEP[@]} =~ "h" ]] && [[ ! ${STEP[@]} =~ "t" ]]; then
+  exit 0
 fi
+
+echo "Building $PKG"
+scanDirs
+cd $SRC_DIR/$DIRNAME
+
+
+# initialize these before any rules are set
+[ "$HOST_BUILD" == true ] && \
+  HOST_BUILD_DIR=$SRC_DIR/$DIRNAME-build-host
+TARGET_BUILD_DIR=$SRC_DIR/$DIRNAME
+[ "$OUT_OF_SRC_BUILD" == true ] && \
+  TARGET_BUILD_DIR+=-build-target
+
+# start the compilation
+start() {
+  if [ ! -z ${FORCE+x} ] && [ "$FORCE" == true ]; then
+    echo "Forcing rebuild"
+  fi
+
+  for st in ${STEP[@]}; do
+    case $st in
+      h) configureAndBuildHost;;
+      t) configureAndBuildTarget;;
+    esac
+  done
+}

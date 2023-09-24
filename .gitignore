@@ -1,3 +1,6 @@
 .vscode
 
+cross/pkg/*
+cross/src/*
 SDKs/*
+DMGs/*

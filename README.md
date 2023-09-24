@@ -29,14 +29,21 @@ Make sure it works:
 sudo docker run hello-world
 ```
 
-## buils lding
+## Building
 To build you have to be in this dir in a terminal. This is because docker copies the files form this dir
 First it selects the packages needed to our host (our linux docker image)
 Then it compiles a cross compiler for mac (osxcross)
 Then it downloads some base libraries from internet and compiles them in order
 Last it compiles Qt
 ```
-docker build -f Dockerfile.osxcross.x86_64.qt6 .
+# build a image with arm64 architecture
+# cd [this dir]
+./buildImage.sh \
+  -f Dockerfile.osxcross.common.qt6 \
+  -t qt6-darwin-arm64 \
+  -a arm64
+
+# wait a long time, many hours
 ```
 Building takes a long while, several hours.
 If all goes well you should get a image hash from docker

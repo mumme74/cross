@@ -57,6 +57,14 @@ elif [ ! -f "$FILE" ]; then
   exit 1
 fi
 
+# download packages to host before creating docker image
+# should only donload once, if building for multiple architectures
+bash cross/buildBase.sh -Sd -a
+if [ "$?" -ne 0 ]; then
+  echo "Failed to download all packages, aborting build"
+  exit 1
+fi
+
 cont=$(cat "$FILE" | sed -e "s/--\*\*REPLACE\*\*--/$ARCH-apple/")
 if [ "$ECHOMODE" == true ]; then
   echo "$cont"
@@ -64,7 +72,7 @@ if [ "$ECHOMODE" == true ]; then
 else
   echo "Creating $TAG docker image"
   echo "echo \"${cont:0:8}...\" | docker build -t \"$TAG\" -f - ."
-  echo -e "$cont" | docker build -t "$TAG" -f - .
+  echo -e "$cont" | DOCKER_BUILDKIT=1 docker build -t "$TAG" -f - .
   if [ "$?" != 0 ]; then
     echo "Failed to complete creation of $TAG"
   else

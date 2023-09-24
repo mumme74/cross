@@ -10,55 +10,33 @@ MD5SUM=13fe8f9f463b2f462763cd21459590a0
 DOWNLOADURL=https://dev.mysql.com/get/Downloads/MySQL-$MAJOR.$MINOR/$TARNAME
 PATCH_FILE=mysql-client.patch
 
-cd /opt/osxcross/cross
-source common.sh
+HOST_BUILD=true # set true if host build required
+OUT_OF_SRC_BUILD=true # set true if build target out of source
 
-echo "Building $PKG"
-cd src/$FILENAME
+source $(dirname "$0")/common.sh
 
-HOST_BUILD_DIR=$SRC_DIR/$FILENAME-build-host
-TARGET_BUILD_DIR=$SRC_DIR/$FILENAME-build-target
-
-if [ -z "$STEP" ] || [ "$STEP" -eq 1 ]; then
-  if [ ! -f "$HOST_BUILD_DIR/config.log" ] || [ "$FORCE" == true ]; then
-    if [ -d "$HOST_BUILD_DIR" ]; then
-      rm -Rf "$HOST_BUILD_DIR"
-    fi
-    mkdir -p "$HOST_BUILD_DIR"
-
-    cd "$HOST_BUILD_DIR"
-
-    cmake \
+HOST_CONFIG_CMD="cmake \
       -DCMAKE_INSTALL_PREFIX=$CROSS_DIR/host \
       -DWITHOUT_SERVER=ON \
       -DWITH_UNIT_TESTS=OFF \
       -DWITH_LIBEVENT=bundled \
       -DBOOST_INCLUDE_DIR=$USR_DIR/include \
-      "$SRC_DIR/$FILENAME" | tee $HOST_BUILD_DIR/config.log
+      \"$SRC_DIR/$FILENAME\" | tee $HOST_BUILD_DIR/config.log \
+    "
 
-    failOnConfigure $?
-  else
-    cd "$HOST_BUILD_DIR"
-  fi
-
+hostBuildFn() {
   cmake --build . --parallel
   failOnBuild $?
+}
+HOST_BUILD_FN=hostBuildFn
 
+hostInstallFn() {
   cmake --install . --prefix=$CROSS_DIR/host
   failOnInstall $?
-fi
+}
+HOST_INSTALL_FN=hostInstallFn
 
-
-if [ -z "$STEP" ] || [ "$STEP" -eq 2 ]; then
-  if [ ! -f "$TARGET_BUILD_DIR/config.log" ] || [ "$FORCE" == true ]; then
-    if [ -d "$TARGET_BUILD_DIR" ]; then
-      rm -Rf "$TARGET_BUILD_DIR"
-    fi
-    mkdir -p "$TARGET_BUILD_DIR"
-
-    cd "$TARGET_BUILD_DIR"
-
-    cmake \
+TARGET_CONFIG_CMD="cmake \
       -DCMAKE_INSTALL_PREFIX=$USR_DIR \
       -DWITHOUT_SERVER=ON \
       -DWITH_UNIT_TESTS=OFF \
@@ -88,16 +66,19 @@ if [ -z "$STEP" ] || [ "$STEP" -eq 2 ]; then
       -DHAVE_CLOCK_REALTIME_EXITCODE=0 \
       -DHAVE_CLOCK_REALTIME_EXITCODE__TRYRUN_OUTPUT=0 \
       -DCMAKE_TOOLCHAIN_FILE=$CROSS_DIR/make-qt6-toolchain.cmake \
-      "$SRC_DIR/$FILENAME" | tee $TARGET_BUILD_DIR/config.log
+    "
+    # "$SRC_DIR/$FILENAME" | tee $TARGET_BUILD_DIR/config.log
 
-    failOnConfigure $?
-  else
-    cd "$HOST_BUILD_DIR"
-  fi
-
+targetBuildFn() {
   cmake --build . --parallel
   failOnBuild $?
+}
+TARGET_BUILD_FN=targetBuildFn
 
+targetInstallFn() {
   cmake --install . --prefix=$USR_DIR
   failOnInstall $?
-fi
+}
+TARGET_INSTALL_FN=targetInstallFn
+
+start

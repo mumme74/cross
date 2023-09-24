@@ -8,30 +8,18 @@ VERSION=$MAJOR.$MINOR.$MICRO
 PKG=boost
 FILENAME=${PKG}_$(echo $VERSION |sed 's/\./_/g' )
 TARNAME=$FILENAME.tar.bz2
-SHA256=5347464af5b14ac54bb945dc68f1dd7c56f0dad7262816b956138fc53bcc0131
+SHA256=fc9f85fc030e233142908241af7a846e60630aa7388de9a5fafb1f3a26840854
 DOWNLOADURL=https://boostorg.jfrog.io/artifactory/main/release/$VERSION/source/$TARNAME
+HOST_BUILD=true # set true if host build required
+OUT_OF_SRC_BUILD=true # set true if build target out of source
 
-cd /opt/osxcross/cross
-source common.sh
+source $(dirname "$0")/common.sh
 
-HOST_BUILD_DIR="$SRC_DIR/$FILENAME-build-host"
-TARGET_BUILD_DIR="$SRC_DIR/$FILENAME-build-target"
-
-echo "Building $PKG"
-cd src/$FILENAME
-
-if [ -z "$STEP" ] || [ "$STEP" == 1 ]; then
+hostConfigFn() {
   echo "---------------------------"
-  echo " Building host $PKG"
-
-  if [ ! -f "$HOST_BUILD_DIR/project-config.jam" ] || [ "$FORCE" == true ]; then
-    if [ "$FORCE" == true ] && [ -d "$HOST_BUILD_DIR" ]; then
-      rm -rf "$HOST_BUILD_DIR"
-    fi
-
-    mkdir -p "$HOST_BUILD_DIR"
-    cd "$HOST_BUILD_DIR"
-
+  echo " configure host $PKG"
+  cd $HOST_BUILD_DIR
+  if [ ! -f "./b2" ] || [ "$FORCE" == true ]; then
     ../$FILENAME/bootstrap.sh \
       --with-toolset=clang \
       --without-libraries=python \
@@ -39,10 +27,19 @@ if [ -z "$STEP" ] || [ "$STEP" == 1 ]; then
 
     failOnConfigure $?
   fi
+}
+HOST_CONFIG_FN=hostConfigFn
 
+hostBuildFn() {
   cd ../$FILENAME
+  # remove possible previous target config
+  if [ -f "$SRC_DIR/$FILENAME/tools/build/src/user-config.jam" ]; then
+    rm "$SRC_DIR/$FILENAME/tools/build/src/user-config.jam"
+  fi
+
   $HOST_BUILD_DIR/b2 install \
     toolset=clang \
+    -q -d2 \
     --build-dir=$HOST_BUILD_DIR \
     --without-python \
     --prefix=$SRC_DIR/host \
@@ -51,17 +48,17 @@ if [ -z "$STEP" ] || [ "$STEP" == 1 ]; then
   failOnInstall $?
 
   echo "Done build and install host $PKG\ninto:$SRC_DIR/host"
-fi
+}
+HOST_BUILD_FN=hostBuildFn
+
+HOST_INSTALL_FN=: # intentional stub
 
 
-if [ -z "$STEP" ] || [ "$STEP" == 2 ]; then
-  echo "-----------------------------------------"
-  echo " Building target $PKG"
-  if [ ! -f "$TARGET_BUILD_DIR/project-config.jam" ] || [ "$FORCE" == true ]; then
-    if [ -d "$TARGET_BUILD_DIR" ] && [ "$FORCE" == true ]; then
-      rm -rf "$TARGET_BUILD_DIR"
-    fi
-    mkdir -p "$TARGET_BUILD_DIR"
+targetConfigFn() {
+  if [ ! -f "./b2" ] ||  [ "$FORCE" == true ]; then
+    echo "-----------------------------------------"
+    echo " Configure target $PKG"
+
     cd "$TARGET_BUILD_DIR"
 
     incl=$USR_DIR/include
@@ -83,11 +80,12 @@ if [ -z "$STEP" ] || [ "$STEP" == 2 ]; then
       LDFLAGS="--sysroot=$TARGET_DIR -L$USR_DIR/lib"
 
     failOnConfigure $?
-
-  else
-    cd "$TARGET_BUILD_DIR"
   fi
+}
+TARGET_CONFIG_FN=targetConfigFn
 
+targetBuildFn() {
+  cd $TARGET_BUILD_DIR
   cd ../$FILENAME
 
   usrConfigJam= "using clang-darwin : osxcross : \n"
@@ -126,4 +124,9 @@ if [ -z "$STEP" ] || [ "$STEP" == 2 ]; then
     -j$(nproc)
 
   failOnInstall $?
-fi
+}
+TARGET_BUILD_FN=targetBuildFn
+
+TARGET_INSTALL_FN=: #intentional stub
+
+start

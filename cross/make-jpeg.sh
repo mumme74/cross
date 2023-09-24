@@ -7,15 +7,12 @@ TARNAME=$FILENAME.tar.gz
 SHA256=4077d6a6a75aeb01884f708919d25934c93305e49f7e3f36db9129320e6f4f3d
 DOWNLOADURL=https://www.ijg.org/files/$TARNAME
 DIRNAME=jpeg-$VERSION
+HOST_BUILD= # set true if host build required
+OUT_OF_SRC_BUILD= # set true if build target out of source
 
-cd /opt/osxcross/cross
-source common.sh
+source $(dirname "$0")/common.sh
 
-echo "Building libj$PKG"
-cd src/$DIRNAME
-
-if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
-  ./configure \
+TARGET_CONFIG_CMD="configure \
     --host=$COMPILER_HOST \
     --with-sysroot=$TARGET_DIR \
     CC=${COMPILER_PREFIX}cc \
@@ -23,14 +20,8 @@ if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
     AR=${COMPILER_PREFIX}ar \
     STRIP=${COMPILER_PREFIX}strip \
     RANLIB=${COMPILER_PREFIX}ranlib \
-    CFLAGS=" -I$USR_DIR/include" \
-    LDFLAGS="-L$USR_DIR/lib" \
-    --prefix=$USR_DIR
-
-    failOnConfigure $?
-fi
-
-make --jobs=$(nproc) JOBS=$(nproc)
-failOnBuild $?
-make install
-failOnInstall $?
+    CFLAGS=\" -I$USR_DIR/include\" \
+    LDFLAGS=\"-L$USR_DIR/lib\" \
+    --prefix=$USR_DIR \
+  "
+start

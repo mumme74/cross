@@ -9,6 +9,10 @@ cd $CROSS_DIR
 source config.sh
 
 setSdk() {
+  if [ ! -d "$TARGET_DIR/SDK/$1" ]; then
+    echo "SDK $1 not found!"
+    exit 1
+  fi
   #arg1 = sdk
   SDK=$1
   SDK_lower=$(echo "$1" | tr '[:upper:]' '[:lower:]')
@@ -19,19 +23,21 @@ ccompiler=
 setSdk $( # default to build on the latest SDK
   ls /opt/osxcross/target/SDK |
   sort -nr -t X -k 2 |
-  sed -e 's/^\s*\(.*\)\.sdk.*/\1/'
+  sed -e 's/^\s*\(.*\)\.sdk.*/\1/' |
+  awk 'NR==1'
 )
 
 # parse arguments to script
-while getopts ha: flag; do
+while getopts ha:s: flag; do
     case "${flag}" in
         a) ccompiler=${OPTARG};;
         s) setSdk "${OPTARG}";;
         h)
           echo "$0 change the architecture to build target against, usage:"
-          echo " $0 x86_64, $0 -a arm64 or $0 -a arm64e\n"
+          echo " $0 x86_64, $0 -a aarch64 or $0 -a arm64\n"
           echo "  -h    This help"
-          echo "  -a    prefix complier with this,  Use either $0 [x86_64-|arm64-|arm64e-]"
+          echo "  -s    select specific sdk, ie: MacOSX13.3"
+          echo "  -a    prefix complier with this,  Use either $0 [x86_64-|aarch64-|arm64-]"
           exit 0
     esac
 done
@@ -39,6 +45,9 @@ done
 if [ -z "$ccompiler" ]; then
   echo "**No architecture given." 1>&2
   exit 1
+elif [ "${ccompiler:0:5}" == "arm64" ]; then
+  echo "${ccompiler:0:5} not recomended, switching to aarch64 instead"
+  ccompiler="aarch64${ccompiler:6}"
 fi
 
 paths=$(echo $PATH | tr ":" " ")
@@ -47,11 +56,14 @@ for path in $paths; do
   compg=$(compgen -G "$path/$ccompiler*-cc")
   ccpaths=("$path/$ccompiler" "${compg[@]}")
   for ccpath in "${ccpaths[@]}"; do
-    if [ -f "$ccpath" ] && [ -x "$ccpath" ]; then
-      cc=${ccpath##*/}
-      echo "found=$cc"
-      break
-    fi
+    IFS=$'\n' ccpath=($(sort -nr <<<"${ccpath[*]}")); unset IFS
+    for ccp in "${ccpath[@]}"; do
+      if [ -f "$ccp" ] && [ -x "$ccp" ]; then
+        cc=${ccp##*/}
+        echo "found=$cc"
+        break
+      fi
+    done
   done
   if [ ! -z "$cc" ]; then break; fi
 done

@@ -6,34 +6,33 @@ TARNAME=$FILENAME.tar.gz
 MD5SUM=d62167d85bcb459c200c0e4b5a63ee48
 DOWNLOADURL=https://www.unixodbc.org/$TARNAME
 
-cd /opt/osxcross/cross
-source common.sh
+HOST_BUILD=true # set true if host build required
+OUT_OF_SRC_BUILD=true # set true if build target out of source
 
-echo "Building $PKG"
-cd src/$FILENAME
+source $(dirname "$0")/common.sh
 
-if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
+if [ ! -d "$HOST_BUILD_DIR" ] && [ ! -d "$TARGET_BUILD_DIR" ]; then
+  cd $CROSS_DIR/src/$DIRNAME
   autoreconf && automake --add-missing --copy --force-missing
-
-  ./configure --prefix=$USR_DIR \
-    --host=$COMPILER_HOST \
-    --with-sysroot=$TARGET_DIR \
-    CC=${COMPILER_PREFIX}cc \
-    CXX=${COMPILER_PREFIX}c++ \
-    AR=${COMPILER_PREFIX}ar \
-    STRIP=${COMPILER_PREFIX}strip \
-    RANLIB=${COMPILER_PREFIX}ranlib \
-    CFLAGS=" -I$USR_DIR/include/zlib" \
-    LDFLAGS="-L$USR_DIR/lib" \
-    --enable-shared \
-    --enable-utf \
-    --enable-unicode-properties \
-    --enable-cpp \
-
-  failOnConfigure $?
 fi
 
-make --jobs=$(nproc) JOBS=$(nproc)
-failOnBuild $?
-make install
-failOnInstall $?
+HOST_CONFIG_CMD="configure --prefix=$CROSS_DIR/host"
+
+TARGET_CONFIG_CMD="configure \
+      --prefix=$CROSS_DIR/host \
+      --exec-prefix=$USR_DIR \
+      --host=$COMPILER_HOST \
+      --with-sysroot=$TARGET_DIR \
+      --includedir=$USR_DIR/include/unixodbc \
+      CC=${COMPILER_PREFIX}cc \
+      CXX=${COMPILER_PREFIX}c++ \
+      AR=${COMPILER_PREFIX}ar \
+      STRIP=${COMPILER_PREFIX}strip \
+      RANLIB=${COMPILER_PREFIX}ranlib \
+      CFLAGS=\" -I$USR_DIR/include/zlib\" \
+      LDFLAGS=\"-L$USR_DIR/lib\" \
+      --enable-shared \
+      --enable-utf8ini \
+    "
+
+start

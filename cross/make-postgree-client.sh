@@ -7,39 +7,51 @@ TARNAME=$FILENAME.tar.bz2
 SHA256=baec5a4bdc4437336653b6cb5d9ed89be5bd5c0c58b94e0becee0a999e63c8f9
 DOWNLOADURL=https://ftp.postgresql.org/pub/source/v$VERSION/$TARNAME
 
-cd /opt/osxcross/cross
-source common.sh
+HOST_BUILD= # set true if host build required
+OUT_OF_SRC_BUILD=true # set true if build target out of source
 
-echo "Building $PKG"
-cd src/$FILENAME
+source $(dirname "$0")/common.sh
 
-if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
-  CHOST=$COMPILER_HOST \
-  ./configure --prefix=$USR_DIR \
-    --host=$COMPILER_HOST \
-    --with-sysroot=$TARGET_DIR \
-    CC=${COMPILER_PREFIX}cc \
-    CXX=${COMPILER_PREFIX}c++ \
-    AR=${COMPILER_PREFIX}ar \
-    STRIP=${COMPILER_PREFIX}strip \
-    RANLIB=${COMPILER_PREFIX}ranlib \
-    CFLAGS=" -I$USR_DIR/include/zlib" \
-    LDFLAGS="-L$USR_DIR/lib" \
-    --enable-shared \
-    --enable-utf \
-    --enable-unicode-properties \
-    --enable-cpp \
+PREFIX=$USR_DIR/postgres-$VERSION
+TARGET_CONFIG_CMD="configure \
+      --prefix=$CROSS_DIR/host \
+      --exec-prefix=$USR_DIR \
+      --host=$COMPILER_HOST \
+      --with-sysroot=$TARGET_DIR \
+      CC=${COMPILER_PREFIX}cc \
+      CXX=${COMPILER_PREFIX}c++ \
+      AR=${COMPILER_PREFIX}ar \
+      STRIP=${COMPILER_PREFIX}strip \
+      RANLIB=${COMPILER_PREFIX}ranlib \
+      CFLAGS=\"-I$USR_DIR/include/zlib -L$USR_DIR/include -I$SDK_DIR/usr/include\" \
+      LDFLAGS=\"-L$USR_DIR/lib -L$SDK_DIR/usr/lib\" \
+      --includedir=$USR_DIR/include/pgsql \
+      --oldincludedir=$USR_DIR/include/pgsql \
+    "
 
-  failOnConfigure $?
-fi
+dirs=("src/bin" "src/interfaces")
 
-cd src/interfaces/
+buildFn() {
+  for dir in ${dirs[@]}; do
+    echo "cd $TARGET_BUILD_DIR/$dir"
+    cd "$TARGET_BUILD_DIR/$dir"
 
-make PG_SYSROOT=$SDK_PATH --jobs=$(nproc) JOBS=$(nproc)
-failOnBuild $?
-make install
-failOnInstall $?
+    # PG_SYSROOT=$TARGET_DIR
+    # fails when compiling parallell, not sure why?
+    make #--jobs=$(nproc) JOBS=$(nproc)
+    failOnError "$?" "Failed to build $PKG $dir"
+  done
+}
+TARGET_BUILD_FN=buildFn
 
-#cd $CROSS_DIR/src/$FILENAME/src/include
-#make install
-#failOnInstall $?
+installFn() {
+  dirs=(${dirs[@]} "src/include")
+  for dir in ${dirs[@]}; do
+    cd "$TARGET_BUILD_DIR/$dir"
+    make install
+    failOnError "$?" "Failed to configure $PKG $dir"
+  done
+}
+TARGET_INSTALL_FN=installFn
+
+start

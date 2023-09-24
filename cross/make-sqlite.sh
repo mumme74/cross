@@ -8,15 +8,12 @@ TARNAME=$FILENAME.tar.gz
 SHA256=49008dbf3afc04d4edc8ecfc34e4ead196973034293c997adad2f63f01762ae1
 DOWNLOADURL=https://www.sqlite.org/$YEAR/$TARNAME
 
-cd /opt/osxcross/cross
-source common.sh
+HOST_BUILD= # set true if host build required
+OUT_OF_SRC_BUILD= # set true if build target out of source
 
-echo "Building $PKG"
-cd src/$FILENAME
+source $(dirname "$0")/common.sh
 
-if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
-  CHOST=$COMPILER_HOST \
-  ./configure --prefix=$USR_DIR \
+TARGET_CONFIG_CMD="configure --prefix=$USR_DIR \
      --host=$COMPILER_HOST \
     --with-sysroot=$TARGET_DIR \
     CC=${COMPILER_PREFIX}cc \
@@ -24,8 +21,8 @@ if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
     AR=${COMPILER_PREFIX}ar \
     STRIP=${COMPILER_PREFIX}strip \
     RANLIB=${COMPILER_PREFIX}ranlib \
-    CFLAGS=" -I$USR_DIR/include/zlib" \
-    LDFLAGS="-L$USR_DIR/lib" \
+    CFLAGS=\" -I$USR_DIR/include/zlib\" \
+    LDFLAGS=\"-L$USR_DIR/lib\" \
     --enable-shared \
     --enable-pcre2-16 \
     --enable-utf \
@@ -33,12 +30,7 @@ if [[ ! -f "$SRC_DIR/$FILENAME/config.log" || "$FORCE" == true ]]; then
     --enable-cpp \
     --disable-pcre2grep-libz \
     --disable-pcre2grep-libbz2 \
-    --disable-pcre2test-libreadline
+    --disable-pcre2test-libreadline \
+  "
 
-  failOnConfigure $?
-fi
-
-make --jobs=$(nproc) JOBS=$(nproc)
-failOnBuild $?
-make install
-failOnInstall $?
+start

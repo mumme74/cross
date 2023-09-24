@@ -8,38 +8,30 @@ FILENAME=$PKG-$VERSION-stable
 TARNAME=$FILENAME.tar.gz
 SHA256=92e6de1be9ec176428fd2367677e61ceffc2ee1cb119035037a27d346b0403bb
 DOWNLOADURL=https://github.com/libevent/libevent/releases/download/release-$VERSION-stable/$TARNAME
+HOST_BUILD= # set true if host build required
+OUT_OF_SRC_BUILD=true # set true if build target out of source
 
+source $(dirname "$0")/common.sh
 
-cd /opt/osxcross/cross
-source common.sh
-
-echo "Building $PKG"
-cd src/$FILENAME
-
-if [[ ! -f "$SRC_DIR/$FILENAME-build/config.log" || "$FORCE" == true ]]; then
-  if [ -d "$SRC_DIR/$FILENAME-build" ]; then
-    rm -Rf "$SRC_DIR/$FILENAME-build"
-  fi
-  mkdir -p "$SRC_DIR/$FILENAME-build"
-
-  cd "$SRC_DIR/$FILENAME-build"
-
-  cmake \
+TARGET_CONFIG_CMD="cmake \
     -DCMAKE_INSTALL_PREFIX=$USR_DIR \
     -DWITHOUT_SERVER=ON \
     -DWITH_UNIT_TESTS=OFF \
     -DDOWNLOAD_BOOST=0 \
     -DWITH_BOOST=$SRC_DIR/boost_1_77_0 \
     -DCMAKE_TOOLCHAIN_FILE=$CROSS_DIR/make-qt6-toolchain.cmake \
-    "$SRC_DIR/$FILENAME"
+  "
 
-  failOnConfigure $?
-else
-  cd "$SRC_DIR/$FILENAME-build"
-fi
+buildFn() {
+  cmake --build . --parallel
+  failOnBuild $?
+}
+TARGET_BUILD_FN=buildFn
 
-cmake --build . --parallel
-failOnBuild $?
+installFn() {
+  cmake --install . --prefix=$USR_DIR
+  failOnInstall $?
+}
+TARGET_INSTALL_FN=installFn
 
-cmake --install . --prefix=$USR_DIR
-failOnInstall $?
+start

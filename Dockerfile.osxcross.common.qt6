@@ -8,14 +8,14 @@ RUN \
     apt -y update && \
     apt -y upgrade && \
     apt -y install \
-        bash \
-        autoconf autoconf-archive automake autopoint bison build-essential bzip2 flex \
+        bash locales cpio \
+        autoconf autoconf-archive automake autopoint bison build-essential bzip2 libbz2-dev flex \
         clang clang-tools libclang-dev cmake gettext git gperf intltool iputils-ping libc6-dev-i386 \
         libffi-dev libgdk-pixbuf2.0-dev libltdl-dev libssl-dev libtool-bin \
         libxml-parser-perl lzip make nano openssl p7zip-full patch perl \
         pkg-config ruby scons sed unzip wget xz-utils libgl-dev meson ninja-build \
         python3 python3-mako python3-pkg-resources python3-setuptools python-is-python3 \
-        python3-html5lib gettext nodejs \
+        python3-html5lib gettext nodejs libreadline-dev \
         libcups2-dev libxkbcommon-dev libnss3-dev libdbus-1-dev libdrm-dev \
         && \
     apt -y autoremove && \
@@ -25,29 +25,45 @@ RUN \
     apt -y update && \
     exit 0
 
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+
 RUN \
     cd /opt && \
     git clone https://github.com/tpoechtrager/osxcross.git && \
     exit 0
 
 # must be done after git clone
+RUN --mount=type=bind,target=/opt/osxcross/SDKs,source=SDKs
 COPY SDKs/*.tar.xz /opt/osxcross/tarballs/
 
+# extract SDKs from dmg
+RUN --mount=type=bind,target=/opt/osxcross/DMGs,source=DMGs
+COPY extractDMG_SDKs.sh /opt/osxcross/
+RUN chmod +x /opt/osxcross/extractDMG_SDKs && \
+    ./extractDMG_SDKs && exit 0
+
 # build osxcross
+# default to build on the latest SDK
+ENV MACOSX_DEPLOYMENT_TARGET=10.9
 RUN \
     cd /opt/osxcross && \
-    UNATTENDED=1 ./build.sh && \
+    UNATTENDED=1 SDK_VERSION=$( \
+        ls /opt/osxcross/tarballs | \
+        sort -nr -t X -k 2 | \
+        sed -e "s/^\s*MacOSX\(.*\)\.sdk.*/\1/" | \
+        awk 'NR==1' \
+        ) OSX_VERSION_MIN=$MACOSX_DEPLOYMENT_TARGET ./build.sh && \
     exit 0
 
 ENV PATH="${PATH}:/opt/osxcross/target/bin"
-ENV MACOSX_DEPLOYMENT_TARGET=10.7
 
 FROM ubuntu:latest
 COPY --from=intermediate /opt/osxcross /opt/osxcross
 
 COPY cross /opt/osxcross/cross
 
-RUN cd /opt/osxcross/cross && chmod +x *.sh && exit 0
+RUN cd /opt/osxcross/cross && chmod ug+x *.sh && exit 0
 
 # set architecture
 RUN cd /opt/osxcross/cross/ && \
@@ -83,7 +99,7 @@ RUN /opt/osxcross/cross/make-boost.sh && exit 0
 RUN /opt/osxcross/cross/make-sqlite.sh && exit 0
 RUN /opt/osxcross/cross/make-unixodbc.sh && exit 0
 RUN /opt/osxcross/cross/make-ncurses.sh && exit 0
-#RUN /opt/osxcross/cross/make-postgree-client.sh && exit 0
+RUN /opt/osxcross/cross/make-postgree-client.sh && exit 0
 RUN /opt/osxcross/cross/make-mysql-client.sh && exit 0
 
 # make sure we didn't forget anything, build custom libs

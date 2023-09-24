@@ -1,6 +1,11 @@
 #!/bin/bash
 
-source getopt.sh
+CROSS_DIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+ALL_OPTION=true
+
+source $CROSS_DIR/getopt.sh
+cd $CROSS_DIR
+
 
 # make and install in this order
 SCRIPTS="make-bzip2.sh \
@@ -28,15 +33,32 @@ SCRIPTS="make-bzip2.sh \
   make-unixodbc.sh \
   make-mysql-client.sh \
 "
-# not yet working
-#  make-boost.sh \
-#  make-postgree.sh \
 
+if [ "$USE_ALL" == true ]; then
+  SCRIPTS+=" \
+    make-qt6.sh \
+  "
+fi
+
+# strip -a from arguments
+args=$@
+PARAMS=()
+for vlu in "${args[@]}"; do
+  [ "$vlu" != "a" ] && PARAMS+=($vlu)
+done
+
+# run all scripts
 for SCRIPT in $SCRIPTS ; do
-  cd /opt/osxcross/cross
+  cd $CROSS_DIR
   echo "--------------------------------"
   echo "-- running $SCRIPT"
-  stdbuf -oL "./$SCRIPT" "$@" 2>&2 && 1>&1
+  if [ ! -f "./$SCRIPT" ]; then
+    echo "build rule script $SCRIPT not found"
+    exit 1
+  elif [ ! -x "./$SCRIPT" ]; then
+    chmod ug+x "./$SCRIPT"
+  fi
+  stdbuf -oL "./$SCRIPT" "$PARAMS" 2>&2 && 1>&1
   exitCode=$?
   if [ $exitCode -ne 0 ]; then
     echo "*** Failed when running $SCRIPT, exiting"

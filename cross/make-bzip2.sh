@@ -6,29 +6,38 @@ FILENAME=$PKG-$VERSION
 TARNAME=$FILENAME.tar.gz
 SHA256=ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269
 DOWNLOADURL=https://sourceware.org/pub/bzip2/$TARNAME
+HOST_BUILD= # set true if host build required
+OUT_OF_SRC_BUILD= # set true if build target out of source
 
+source $(dirname "$0")/common.sh
 
-cd /opt/osxcross/cross
-source common.sh
-ls src
-echo "Building $PKG"
-cd src/$FILENAME
+configFn() {
+  if [ "$FORCE" == true ]; then
+    echo "Forcing rebuild"
 
-if [ "$FORCE" == true ]; then
-  echo "Forcing rebuild"
-  make clean
-  failOnError $? "Failed to clean build before rebuild on $PKG"
-fi
+    make clean
+    failOnError $? "Failed to clean build before rebuild on $PKG"
+  fi
+}
+TARGET_CONFIG_FN=configFn
 
-make libbz2.a bzip2 bzip2recover --jobs=$(nproc) JOBS=$(nproc) \
-  PREFIX=$USR_DIR \
-  CC=${COMPILER_PREFIX}cc \
-  CXX=${COMPILER_PREFIX}c++ \
-  AR=${COMPILER_PREFIX}ar \
-  STRIP=${COMPILER_PREFIX}strip \
-  RANLIB=${COMPILER_PREFIX}ranlib
+buildFn() {
+  make libbz2.a bzip2 bzip2recover --jobs=$(nproc) JOBS=$(nproc) \
+    PREFIX=$USR_DIR \
+    CC=${COMPILER_PREFIX}cc \
+    CXX=${COMPILER_PREFIX}c++ \
+    AR=${COMPILER_PREFIX}ar \
+    STRIP=${COMPILER_PREFIX}strip \
+    RANLIB=${COMPILER_PREFIX}ranlib
 
-failOnBuild $?
+  failOnBuild $?
+}
+TARGET_BUILD_FN=buildFn
 
-make install PREFIX=$USR_DIR
-failOnInstall $?
+installFn() {
+  make install PREFIX=$USR_DIR
+  failOnInstall $?
+}
+TARGET_INSTALL_FN=installFn
+
+start
