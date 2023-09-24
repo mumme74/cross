@@ -83,10 +83,10 @@ TARGET_CONFIG_CMD="configure \
       -qt-sqlite \
       -enable-gif \
       -enable-cups \
-      -webengine-spellchecker \
-      -webengine-native-spellchecker \
-      -webengine-proprietary-codecs \
-      -webengine-webrtc \
+      -enable-webengine-spellchecker \
+      -enable-webengine-native-spellchecker \
+      -enable-webengine-proprietary-codecs \
+      -enable-webengine-webrtc \
       -- \
         -DCMAKE_TOOLCHAIN_FILE=$CROSS_DIR/make-qt6-toolchain.cmake \
         -DQT_BUILD_EXAMPLES=OFF \

@@ -72,7 +72,8 @@ if [ "$ECHOMODE" == true ]; then
 else
   echo "Creating $TAG docker image"
   echo "echo \"${cont:0:8}...\" | docker build -t \"$TAG\" -f - ."
-  echo -e "$cont" | DOCKER_BUILDKIT=1 docker build -t "$TAG" -f - .
+  echo -e "$cont" | docker build -t "$TAG" -f - .
+  # DOCKER_BUILDKIT=1
   if [ "$?" != 0 ]; then
     echo "Failed to complete creation of $TAG"
   else

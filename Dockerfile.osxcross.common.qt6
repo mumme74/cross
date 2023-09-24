@@ -34,11 +34,13 @@ RUN \
     exit 0
 
 # must be done after git clone
-RUN --mount=type=bind,target=/opt/osxcross/SDKs,source=SDKs
+#RUN --mount=type=bind,target=/opt/osxcross/SDKs,source=SDKs
 COPY SDKs/*.tar.xz /opt/osxcross/tarballs/
 
 # extract SDKs from dmg
-RUN --mount=type=bind,target=/opt/osxcross/DMGs,source=DMGs
+#RUN --mount=type=bind,target=/opt/osxcross/DMGs,source=DMGs
+COPY DMGs /opt/osxcross/DMGs
+
 COPY extractDMG_SDKs.sh /opt/osxcross/
 RUN chmod +x /opt/osxcross/extractDMG_SDKs && \
     ./extractDMG_SDKs && exit 0
@@ -108,9 +110,9 @@ RUN /opt/osxcross/cross/buildBase.sh && exit 0
 # create qt
 RUN /opt/osxcross/cross/make-qt6.sh && exit 0
 
-# cleanup
-#RUN cd /opt/osxcross/cross && rm -Rf src pkg && exit 0
-
 # add qt host tools to path
 ENV PATH="/opt/osxcross/cross/host/bin:/opt/osxcross/cross/host/qt6/bin:$PATH"
 
+# cleanup
+#RUN cd /opt/osxcross/cross && rm -Rf src pkg &&
+#    cd /opt/osxcross/ && rm -Rf SDKs/* DMGs/* exit 0
