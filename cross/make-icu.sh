@@ -8,6 +8,7 @@ FILENAME=$PKG-${MAJOR}_${MINOR}-src
 TARNAME=$FILENAME.tgz
 MD5SUM=b8a4b8cf77f2e2f6e1341eac0aab2fc4
 DOWNLOADURL=https://github.com/unicode-org/icu/releases/download/release-$MAJOR-$MINOR/$TARNAME
+DIRNAME=icu
 HOST_BUILD=true # set true if host build required
 OUT_OF_SRC_BUILD=true # set true if build target out of source
 
@@ -41,7 +42,7 @@ targetConfigFn() {
     $SRC_DIR/icu/source/configure \
       --host=$COMPILER_HOST \
       --with-sysroot=$TARGET_DIR \
-      --with-cross-build=$SRC_DIR/icu-build-host \
+      --with-cross-build=$HOST_BUILD_DIR \
       --with-pic \
       CC=${COMPILER_PREFIX}cc \
       CXX=${COMPILER_PREFIX}c++ \

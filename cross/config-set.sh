@@ -4,12 +4,13 @@ TARGET_DIR=/opt/osxcross/target
 CROSS_DIR=/opt/osxcross/cross
 SDK=
 SDK_lower=
+PGK_CONFIG_DIR=$TARGET_DIR/usr/lib/pkgconfig
 
 cd $CROSS_DIR
 source config.sh
 
 setSdk() {
-  if [ ! -d "$TARGET_DIR/SDK/$1" ]; then
+  if [ ! -d "$TARGET_DIR/SDK/${1}.sdk" ]; then
     echo "SDK $1 not found!"
     exit 1
   fi
@@ -51,6 +52,8 @@ elif [ "${ccompiler:0:5}" == "arm64" ]; then
 fi
 
 paths=$(echo $PATH | tr ":" " ")
+tgtPath="/opt/osxcross/target/bin"
+[[ "${paths[@]}" =~ "$tgtPath" ]] || paths=("${paths[@]} $tgtPath")
 cc=
 for path in $paths; do
   compg=$(compgen -G "$path/$ccompiler*-cc")
@@ -77,6 +80,8 @@ fi
 COMPILER_ARCH=$(echo $cc|sed -e "s/^\([^-]*\)-.*/\1/")
 COMPILER_TO_SYSTEM=$(echo $cc|sed -e "s/^[^-]*-\([a-z_\-]*\).*/\1/")
 DARWIN_VERSION=$(echo $cc|sed -e "s/^[^-]*-[a-z_\-]*\([0-9.]\+\).*/\1/")
+COMPILER_HOST=${COMPILER_ARCH}-${COMPILER_TO_SYSTEM}${DARWIN_VERSION}
+COMPILER_PREFIX=$COMPILER_HOST-
 echo "Setting compiler prefix to: $COMPILER_ARCH-${COMPILER_TO_SYSTEM}$DARWIN_VERSION"
 
 TARGET_DIR_ESC=$(echo $TARGET_DIR | sed 's/\//\\\//g')
@@ -102,5 +107,13 @@ mysrc=$(cat $CROSS_DIR/make-qt6-toolchain.cmake | \
       )
 echo "$mysrc" > $CROSS_DIR/make-qt6-toolchain.cmake
 
-
+PKG_CONFIG_DIR_ESC=$(echo "$PKG_CONFIG_DIR" | sed 's/\//\\\//g')
+bashrc_src=$(cat $HOME/.bashrc)
+if [[ "$bashrc_src" != *"OSXCROSS_PKG_CONFIG_PATH"* ]]; then
+  bashrc_src+=$'\nexport OSXCROSS_PKG_CONFIG_PATH=$PKG_CONFIG_DIR'
+fi
+bashrc_src=$(echo "$bashrc_src" | \
+      sed -e "s/^\s*\(export OSXCROSS_PKG_CONFIG_PATH=\).*$/\1$PKG_CONFIG_DIR_ESC/" \
+      )
+echo "$bashrc_src"
 

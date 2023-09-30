@@ -16,10 +16,11 @@ OUT_OF_SRC_BUILD=true # set true if build target out of source
 source $(dirname "$0")/common.sh
 
 hostConfigFn() {
-  echo "---------------------------"
-  echo " configure host $PKG"
   cd $HOST_BUILD_DIR
   if [ ! -f "./b2" ] || [ "$FORCE" == true ]; then
+    echo "---------------------------"
+    echo " configure host $PKG"
+
     ../$FILENAME/bootstrap.sh \
       --with-toolset=clang \
       --without-libraries=python \
@@ -31,6 +32,8 @@ hostConfigFn() {
 HOST_CONFIG_FN=hostConfigFn
 
 hostBuildFn() {
+  if [ -f "$HOST_BUILD_DIR/build.log" ]; then return 0; fi
+
   cd ../$FILENAME
   # remove possible previous target config
   if [ -f "$SRC_DIR/$FILENAME/tools/build/src/user-config.jam" ]; then
@@ -43,15 +46,21 @@ hostBuildFn() {
     --build-dir=$HOST_BUILD_DIR \
     --without-python \
     --prefix=$SRC_DIR/host \
-    -j$(nproc)
+    -j$(nproc) \
+    | tee $HOST_BUILD_DIR/.build.log
 
   failOnInstall $?
+
+  mv $HOST_BUILD_DIR/.build.log $HOST_BUILD_DIR/build.log
 
   echo "Done build and install host $PKG\ninto:$SRC_DIR/host"
 }
 HOST_BUILD_FN=hostBuildFn
 
-HOST_INSTALL_FN=: # intentional stub
+stubFn() {
+  echo "null">/dev/null
+}
+HOST_INSTALL_FN=stubFn # intentional stub
 
 
 targetConfigFn() {
@@ -76,7 +85,7 @@ targetConfigFn() {
              -I$incl/postgresql/internal -I$incl/postgresql/server \
              -I$incl/unixODBC \
              -I$incl/unicode -I$incl/lzma -I$incl/readline" \
-      CXXFLAGS="--std=c++11" \
+      CXXFLAGS="--std=c++20" \
       LDFLAGS="--sysroot=$TARGET_DIR -L$USR_DIR/lib"
 
     failOnConfigure $?
@@ -85,16 +94,18 @@ targetConfigFn() {
 TARGET_CONFIG_FN=targetConfigFn
 
 targetBuildFn() {
+  if [ -f "$TARGET_BUILD_DIR/build.log" ]; then return 0; fi
   cd $TARGET_BUILD_DIR
+
   cd ../$FILENAME
 
-  usrConfigJam= "using clang-darwin : osxcross : \n"
-  usrConfigJam+="  $TARGET_DIR/bin/${COMPILER_PREFIX}c++ :\n"
-  usrConfigJam+="    <compilerflags>--sysroot=$TARGET_DIR $USR_INCLUDES \n"
-  usrConfigJam+="    <linkflags>$USR_LIB_PATHS\n"
-  usrConfigJam+="    <archiver>$TARGET_DIR/bin/${COMPILER_PREFIX}ar \n"
-  usrConfigJam+="    <ranlib>$TARGET_DIR/bin/${COMPILER_PREFIX}ranlib \n"
-  usrConfigJam+=";"
+   usrConfigJam="using clang-darwin : osxcross : \n\
+    $TARGET_DIR/bin/${COMPILER_PREFIX}c++ :\n\
+      <compilerflags>--sysroot=$TARGET_DIR $USR_INCLUDES \n\
+      <linkflags>$USR_LIB_PATHS\n\
+      <archiver>$TARGET_DIR/bin/${COMPILER_PREFIX}ar \n\
+      <ranlib>$TARGET_DIR/bin/${COMPILER_PREFIX}ranlib \n\
+  ;"
   echo -e "$usrConfigJam" > $SRC_DIR/$FILENAME/tools/build/src/user-config.jam
 
 
@@ -121,12 +132,15 @@ targetBuildFn() {
     --build-dir=$TARGET_BUILD_DIR \
     --without-python \
     --prefix=$USR_DIR \
-    -j$(nproc)
+    -j$(nproc) \
+    | tee $TARGET_BUILD_DIR/.build.log
 
   failOnInstall $?
+
+  mv $TARGET_BUILD_DIR/.build.log $TARGET_BUILD_DIR/build.log
 }
 TARGET_BUILD_FN=targetBuildFn
 
-TARGET_INSTALL_FN=: #intentional stub
+TARGET_INSTALL_FN=stubFn #intentional stub
 
 start

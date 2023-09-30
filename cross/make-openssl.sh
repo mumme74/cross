@@ -27,7 +27,8 @@ configFn() {
       --openssldir=$USR_DIR \
       --prefix=$USR_DIR \
       --sysroot=$TARGET_DIR \
-      --cross-compile-prefix=$COMPILER_PREFIX
+      --cross-compile-prefix=$COMPILER_PREFIX \
+    | tee config.log
 
     failOnConfigure $?
   fi

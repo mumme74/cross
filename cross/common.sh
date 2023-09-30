@@ -20,11 +20,16 @@ HOST_BUILD_DIR=
 HOST_CONFIG_CMD=
 HOST_CONFIG_FN=
 HOST_BUILD_FN=
+HOST_BUILD_CMD=
 HOST_INSTALL_FN=
+HOST_INSTALL_CMD=
+TARGET_BUILD=true
 TARGET_BUILD_DIR=
 TARGET_CONFIG_CMD=
 TARGET_CONFIG_FN=
+TARGET_BUILD_CMD=
 TARGET_BUILD_FN=
+TARGET_INSTALL_CMD=
 TARGET_INSTALL_FN=
 
 cd "$CROSS_DIR"
@@ -40,8 +45,8 @@ searchDirs() {
   # arg2 = root dir to scan
   # arg3 = pad with
   local __resultvar=$1
-  local paths=""
-  for dir in $(ls -d $2/*/); do
+  local paths="${3}$2 "
+  for dir in $(ls -d $2/*/ 2>/dev/null); do
     paths+="${3}$dir "
   done
 
@@ -150,6 +155,10 @@ defaultConfigFn() {
   local configCmd=$3
 
   cd $buildDir
+  if [ -z "$configCmd" ]; then
+    echo "**No *_CONFIG_CMD given, aborting"
+    exit 1
+  fi
 
   if [ "${configCmd:0:9}" == "configure" ]; then
     [ "$srcDir" != "$buildDir" ] && \
@@ -177,22 +186,28 @@ defaultConfigFn() {
 }
 
 defaultBuildFn() {
-  make --jobs=$(nproc) JOBS=$(nproc)
+  local buildCmd=$1
+  echo "$buildCmd"
+  eval "$buildCmd"
   failOnBuild $?
 }
 
 defaultInstallFn() {
-  make install
+  local installCmd=$1
+  echo "$installCmd"
+  eval "$installCmd"
   failOnInstall $?
 }
 
 configureAndBuild() {
   local srcDir=$1
   local buildDir=$2
-  local configDmd=$3
+  local configCmd=$3
   local configFn=$4
   local buildFn=$5
   local installFn=$6
+  local buildCmd=$7
+  local installCmd=$8
 
   # force rebuild clean
   if [ "$FORCE" == true ]; then
@@ -210,8 +225,8 @@ configureAndBuild() {
   $configFn "$srcDir" "$buildDir" "$configCmd"
 
   # build
-  [ -z "$buildFn" ] && defaultBuildFn || $buildFn
-  [ -z "$installFn" ] && defaultInstallFn || $installFn
+  [ -z "$buildFn" ] && defaultBuildFn "$buildCmd"|| $buildFn
+  [ -z "$installFn" ] && defaultInstallFn "$installCmd" || $installFn
 }
 
 configureAndBuildHost() {
@@ -219,10 +234,16 @@ configureAndBuildHost() {
     echo "---------------------"
     echo "building host $PKG"
     local configFn=$HOST_CONFIG_FN
+    local buildCmd=$HOST_BUILD_CMD
+    local installCmd=$HOST_INSTALL_CMD
 
     # select configFn
     [ -z "$configFn" ] &&
       configFn=defaultConfigFn
+    [ -z "$buildCmd" ] &&
+      buildCmd="make --jobs=$(nproc) JOBS=$(nproc)"
+    [ -z "$installCmd" ] &&
+      installCmd="make install"
 
     configureAndBuild \
       "$SRC_DIR/$DIRNAME" \
@@ -230,26 +251,38 @@ configureAndBuildHost() {
       "$HOST_CONFIG_CMD" \
       "$configFn" \
       "$HOST_BUILD_FN" \
-      "$HOST_INSTALL_FN"
+      "$HOST_INSTALL_FN" \
+      "$buildCmd" \
+      "$installCmd"
   fi
 }
 
 configureAndBuildTarget() {
-  echo "---------------------"
-  echo "building target $PKG"
-  local configFn="$TARGET_CONFIG_FN"
+  if [ "$TARGET_BUILD" == true ]; then
+    echo "---------------------"
+    echo "building target $PKG"
+    local configFn="$TARGET_CONFIG_FN"
+    local buildCmd=$TARGET_BUILD_CMD
+    local installCmd=$TARGET_INSTALL_CMD
 
-  # select configFn
-  [ -z "$configFn" ] && \
-    configFn=defaultConfigFn
+    # select configFn
+    [ -z "$configFn" ] && \
+      configFn=defaultConfigFn
+    [ -z "$buildCmd" ] &&
+      buildCmd="make --jobs=$(nproc) JOBS=$(nproc)"
+    [ -z "$installCmd" ] &&
+      installCmd="make install"
 
-  configureAndBuild \
-    "$SRC_DIR/$DIRNAME" \
-    "$TARGET_BUILD_DIR" \
-    "$TARGET_CONFIG_CMD" \
-    "$configFn" \
-    "$TARGET_BUILD_FN" \
-    "$TARGET_INSTALL_FN"
+    configureAndBuild \
+      "$SRC_DIR/$DIRNAME" \
+      "$TARGET_BUILD_DIR" \
+      "$TARGET_CONFIG_CMD" \
+      "$configFn" \
+      "$TARGET_BUILD_FN" \
+      "$TARGET_INSTALL_FN" \
+      "$buildCmd" \
+      "$installCmd"
+  fi
 }
 
 [ -z "$DIRNAME" ] && DIRNAME=$FILENAME

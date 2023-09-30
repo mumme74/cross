@@ -5,7 +5,7 @@ set(SDK_PATH /opt/osxcross/target/SDK/*)
 
 set(CMAKE_SYSTEM_NAME Darwin)
 set(CMAKE_SYSTEM_PROCESSOR *)
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0.0")
 
 set(TARGET_SYSROOT /opt/osxcross/target)
 set(CROSS_COMPILER /opt/osxcross/target/bin/*)
@@ -19,7 +19,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -F${SDK_PATH}/System/Libra
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -F${SDK_PATH}/System/Library/Frameworks -L${TARGET_SYSROOT}/usr/lib -L${SDK_PATH}/usr/lib")
 
 set(ENV{PKG_CONFIG_PATH} "")
-set(ENV{PKG_CONFIG_LIBDIR} ${CMAKE_SYSROOT}/usr/lib/pkgconfig:${CMAKE_SYSROOT}/usr/share/pkgconfig)
+set(ENV{PKG_CONFIG_LIBDIR} ${CMAKE_SYSROOT}/usr/lib/pkgconfig;${CMAKE_SYSROOT}/usr/share/pkgconfig)
 set(ENV{PKG_CONFIG_SYSROOT_DIR} ${CMAKE_SYSROOT})
 
 set(CMAKE_C_COMPILER ${CROSS_COMPILER}-cc)

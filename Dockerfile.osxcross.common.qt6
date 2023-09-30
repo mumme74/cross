@@ -21,9 +21,10 @@ RUN \
     apt -y autoremove && \
     apt -y autoclean && \
     apt -y clean && \
-    rm -rf /var/lib/apt/lists/* && \
     apt -y update && \
     exit 0
+
+    #rm -rf /var/lib/apt/lists/* &&
 
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
@@ -41,9 +42,9 @@ COPY SDKs/*.tar.xz /opt/osxcross/tarballs/
 #RUN --mount=type=bind,target=/opt/osxcross/DMGs,source=DMGs
 COPY DMGs /opt/osxcross/DMGs
 
-COPY extractDMG_SDKs.sh /opt/osxcross/
-RUN chmod +x /opt/osxcross/extractDMG_SDKs && \
-    ./extractDMG_SDKs && exit 0
+COPY extractDMG_SDKs.sh /opt/osxcross/extractDMG_SDKs.sh
+RUN chmod +x /opt/osxcross/extractDMG_SDKs.sh && \
+    /opt/osxcross/extractDMG_SDKs.sh && exit 0
 
 # build osxcross
 # default to build on the latest SDK
@@ -59,9 +60,8 @@ RUN \
     exit 0
 
 ENV PATH="${PATH}:/opt/osxcross/target/bin"
-
-FROM ubuntu:latest
-COPY --from=intermediate /opt/osxcross /opt/osxcross
+RUN echo "export PATH=${PATH}:/opt/osxcross/target/bin" >> /root/.bashrc && \
+    exit 0
 
 COPY cross /opt/osxcross/cross
 
@@ -93,7 +93,7 @@ RUN /opt/osxcross/cross/make-harfbuzz.sh && exit 0
 RUN /opt/osxcross/cross/make-freetype.sh && exit 0
 RUN /opt/osxcross/cross/make-fontconfig.sh && exit 0
 RUN /opt/osxcross/cross/make-openssl.sh && exit 0
-RUN /opt/osxcross/cross/make-libevent-sh && exit 0
+RUN /opt/osxcross/cross/make-libevent.sh && exit 0
 RUN /opt/osxcross/cross/make-hunspell.sh && exit 0
 RUN /opt/osxcross/cross/make-gettext.sh && exit 0
 RUN /opt/osxcross/cross/make-libxml2.sh && exit 0
@@ -101,8 +101,11 @@ RUN /opt/osxcross/cross/make-boost.sh && exit 0
 RUN /opt/osxcross/cross/make-sqlite.sh && exit 0
 RUN /opt/osxcross/cross/make-unixodbc.sh && exit 0
 RUN /opt/osxcross/cross/make-ncurses.sh && exit 0
-RUN /opt/osxcross/cross/make-postgree-client.sh && exit 0
+RUN /opt/osxcross/cross/make-postgres-client.sh && exit 0
 RUN /opt/osxcross/cross/make-mysql-client.sh && exit 0
+
+# try to make libclang
+RUN /opt/osxcross/cross/make-libclang.sh || exit 0
 
 # make sure we didn't forget anything, build custom libs
 RUN /opt/osxcross/cross/buildBase.sh && exit 0
@@ -114,5 +117,5 @@ RUN /opt/osxcross/cross/make-qt6.sh && exit 0
 ENV PATH="/opt/osxcross/cross/host/bin:/opt/osxcross/cross/host/qt6/bin:$PATH"
 
 # cleanup
-#RUN cd /opt/osxcross/cross && rm -Rf src pkg &&
-#    cd /opt/osxcross/ && rm -Rf SDKs/* DMGs/* exit 0
+RUN cd /opt/osxcross/cross && rm -Rf src pkg && \
+    cd /opt/osxcross/ && rm -Rf tarballs/* DMGs/* exit 0

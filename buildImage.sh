@@ -76,6 +76,7 @@ else
   # DOCKER_BUILDKIT=1
   if [ "$?" != 0 ]; then
     echo "Failed to complete creation of $TAG"
+    exit 1
   else
     echo "Done creating $TAG image"
   fi

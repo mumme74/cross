@@ -17,7 +17,6 @@ source $(dirname "$0")/common.sh
 
 HOST_CONFIG_CMD="configure \
       -prefix $CROSS_DIR/host \
-      -submodules qtbase,qtgui,qtdeclarative,qttools,qttranslations \
       -make libs \
       -make tools \
       -- \
@@ -27,16 +26,8 @@ HOST_CONFIG_CMD="configure \
         -DQT_BUILD_TESTS=OFF \
     "
 
-hostBuildFn() {
-  cmake --build . --parallel
-  failOnInstall $?
-}
-HOST_BUILD_FN=hostBuildFn
-hostInstallFn() {
-  cmake --install .
-  failOnBuild $?
-}
-HOST_INSTALL_FN=hostInstallFn
+HOST_BUILD_CMD="cmake --build . --parallel"
+HOST_INSTALL_CMD="cmake --install ."
 
 incl=$USR_DIR/include
 
@@ -94,16 +85,8 @@ TARGET_CONFIG_CMD="configure \
     "
 
 
-targetBuildFn() {
-  cmake --build . --parallel
-  failOnBuild $?
-}
-TARGET_BUILD_FN=targetBuildFn
+TARGET_BUILD_CMD="cmake --build . --parallel"
 
-targetInstallFn() {
-  cmake --install .
-  failOnInstall $?
-}
-TARGET_INSTALL_FN=targetInstallFn
+TARGET_INSTALL_CMD="cmake --install ."
 
 start

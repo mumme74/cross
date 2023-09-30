@@ -24,17 +24,9 @@ HOST_CONFIG_CMD="cmake \
       \"$SRC_DIR/$FILENAME\" | tee $HOST_BUILD_DIR/config.log \
     "
 
-hostBuildFn() {
-  cmake --build . --parallel
-  failOnBuild $?
-}
-HOST_BUILD_FN=hostBuildFn
+HOST_BUILD_CMD="cmake --build . --parallel"
 
-hostInstallFn() {
-  cmake --install . --prefix=$CROSS_DIR/host
-  failOnInstall $?
-}
-HOST_INSTALL_FN=hostInstallFn
+HOST_INSTALL_CMD="cmake --install . --prefix=$CROSS_DIR/host"
 
 TARGET_CONFIG_CMD="cmake \
       -DCMAKE_INSTALL_PREFIX=$USR_DIR \
@@ -69,16 +61,8 @@ TARGET_CONFIG_CMD="cmake \
     "
     # "$SRC_DIR/$FILENAME" | tee $TARGET_BUILD_DIR/config.log
 
-targetBuildFn() {
-  cmake --build . --parallel
-  failOnBuild $?
-}
-TARGET_BUILD_FN=targetBuildFn
+TARGET_BUILD_CMD="cmake --build . --parallel"
 
-targetInstallFn() {
-  cmake --install . --prefix=$USR_DIR
-  failOnInstall $?
-}
-TARGET_INSTALL_FN=targetInstallFn
+TARGET_INSTALL_CMD="cmake --install . --prefix=$USR_DIR"
 
 start

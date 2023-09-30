@@ -14,6 +14,7 @@ SCRIPTS="make-bzip2.sh \
   make-bison.sh \
   make-pcre.sh \
   make-pcre2.sh \
+  make-libffi.sh \
   make-png.sh \
   make-jpeg.sh \
   make-icu.sh \
@@ -31,6 +32,7 @@ SCRIPTS="make-bzip2.sh \
   make-ncurses.sh \
   make-sqlite.sh \
   make-unixodbc.sh \
+  make-postgres-client.sh \
   make-mysql-client.sh \
 "
 

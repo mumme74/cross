@@ -25,10 +25,6 @@ TARGET_CONFIG_CMD="configure \
     --prefix=$USR_DIR \
   "
 
-installFn() {
-  make install PREFIX=$USR_DIR
-  failOnInstall $?
-}
-TARGET_INSTALL_FN=installFn
+TARGET_INSTALL_CMD="make install PREFIX=$USR_DIR"
 
 start
