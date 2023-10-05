@@ -7,7 +7,7 @@ TARNAME=$FILENAME.tar.bz2
 SHA256=8d36cd8cb6ea2a4c2bb358ff6411b0c788633a2a45dabbf1aeb4b701d1b5e840
 DOWNLOADURL=https://github.com/PCRE2Project/pcre2/releases/download/pcre2-$VERSION/$TARNAME
 HOST_BUILD= # set true if host build required
-OUT_OF_SRC_BUILD= # set true if build target out of source
+OUT_OF_SRC_BUILD=true # set true if build target out of source
 
 source $(dirname "$0")/common.sh
 

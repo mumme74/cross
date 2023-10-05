@@ -7,7 +7,7 @@ TARNAME=$FILENAME.tar.xz
 SHA256=1e0a14a8bf52d878e500c33d291026b9ebe969c27b3998d4b4285ab6dbce4527
 DOWNLOADURL=http://ftp.acc.umu.se/mirror/gnu.org/gnu/bison/$TARNAME
 HOST_BUILD= # set true if host build required
-OUT_OF_SRC_BUILD= # set true if build target out of source
+OUT_OF_SRC_BUILD=true # set true if build target out of source
 
 source $(dirname "$0")/common.sh
 

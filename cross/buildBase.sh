@@ -34,6 +34,7 @@ SCRIPTS="make-bzip2.sh \
   make-unixodbc.sh \
   make-postgres-client.sh \
   make-mysql-client.sh \
+  make-libclang.sh \
 "
 
 if [ "$USE_ALL" == true ]; then

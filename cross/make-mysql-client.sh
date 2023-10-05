@@ -20,13 +20,15 @@ HOST_CONFIG_CMD="cmake \
       -DWITHOUT_SERVER=ON \
       -DWITH_UNIT_TESTS=OFF \
       -DWITH_LIBEVENT=bundled \
-      -DBOOST_INCLUDE_DIR=$USR_DIR/include \
+      -DBOOST_INCLUDE_DIR=$CROSS_DIR/host/include \
       \"$SRC_DIR/$FILENAME\" | tee $HOST_BUILD_DIR/config.log \
     "
 
 HOST_BUILD_CMD="cmake --build . --parallel"
 
 HOST_INSTALL_CMD="cmake --install . --prefix=$CROSS_DIR/host"
+
+HOST_CLEAN_CMD="rm -rf *"
 
 TARGET_CONFIG_CMD="cmake \
       -DCMAKE_INSTALL_PREFIX=$USR_DIR \
@@ -64,5 +66,7 @@ TARGET_CONFIG_CMD="cmake \
 TARGET_BUILD_CMD="cmake --build . --parallel"
 
 TARGET_INSTALL_CMD="cmake --install . --prefix=$USR_DIR"
+
+TARGET_CLEAN_CMD="rm -rf *"
 
 start

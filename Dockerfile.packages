@@ -1,0 +1,30 @@
+# leave docker in a recoverable state while debugging
+RUN /opt/osxcross/cross/make-zlib.sh && exit 0
+RUN /opt/osxcross/cross/make-xv.sh && exit 0
+RUN /opt/osxcross/cross/make-bzip2.sh && exit 0
+RUN /opt/osxcross/cross/make-bison.sh && exit 0
+RUN /opt/osxcross/cross/make-jpeg.sh && exit 0
+RUN /opt/osxcross/cross/make-pcre.sh && exit 0
+RUN /opt/osxcross/cross/make-pcre2.sh && exit 0
+RUN /opt/osxcross/cross/make-libffi.sh && exit 0
+RUN /opt/osxcross/cross/make-png.sh && exit 0
+RUN /opt/osxcross/cross/make-icu.sh && exit 0
+RUN /opt/osxcross/cross/make-iconv.sh && exit 0
+RUN /opt/osxcross/cross/make-readline.sh && exit 0
+RUN /opt/osxcross/cross/make-harfbuzz.sh && exit 0
+RUN /opt/osxcross/cross/make-freetype.sh && exit 0
+RUN /opt/osxcross/cross/make-fontconfig.sh && exit 0
+RUN /opt/osxcross/cross/make-openssl.sh && exit 0
+RUN /opt/osxcross/cross/make-libevent.sh && exit 0
+RUN /opt/osxcross/cross/make-hunspell.sh && exit 0
+RUN /opt/osxcross/cross/make-gettext.sh && exit 0
+RUN /opt/osxcross/cross/make-libxml2.sh && exit 0
+RUN /opt/osxcross/cross/make-boost.sh && exit 0
+RUN /opt/osxcross/cross/make-sqlite.sh && exit 0
+RUN /opt/osxcross/cross/make-unixodbc.sh && exit 0
+RUN /opt/osxcross/cross/make-ncurses.sh && exit 0
+RUN /opt/osxcross/cross/make-postgres-client.sh && exit 0
+RUN /opt/osxcross/cross/make-mysql-client.sh && exit 0
+
+# try to make libclang
+RUN /opt/osxcross/cross/make-libclang.sh || exit 0

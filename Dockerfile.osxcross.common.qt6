@@ -43,20 +43,21 @@ COPY SDKs/*.tar.xz /opt/osxcross/tarballs/
 COPY DMGs /opt/osxcross/DMGs
 
 COPY extractDMG_SDKs.sh /opt/osxcross/extractDMG_SDKs.sh
-RUN chmod +x /opt/osxcross/extractDMG_SDKs.sh && \
-    /opt/osxcross/extractDMG_SDKs.sh && exit 0
 
 # build osxcross
 # default to build on the latest SDK
 ENV MACOSX_DEPLOYMENT_TARGET=10.9
 RUN \
     cd /opt/osxcross && \
+    chmod +x /opt/osxcross/extractDMG_SDKs.sh && \
+    ./extractDMG_SDKs.sh && \
     UNATTENDED=1 SDK_VERSION=$( \
         ls /opt/osxcross/tarballs | \
         sort -nr -t X -k 2 | \
         sed -e "s/^\s*MacOSX\(.*\)\.sdk.*/\1/" | \
         awk 'NR==1' \
         ) OSX_VERSION_MIN=$MACOSX_DEPLOYMENT_TARGET ./build.sh && \
+    rm -rf tarballs/* && \
     exit 0
 
 ENV PATH="${PATH}:/opt/osxcross/target/bin"
@@ -68,44 +69,19 @@ COPY cross /opt/osxcross/cross
 RUN cd /opt/osxcross/cross && chmod ug+x *.sh && exit 0
 
 # set architecture
+#RUN cd /opt/osxcross/cross/ && \
+#    ./config-set.sh -a --**REPLACE**-- && \
+#    exit 0
 RUN cd /opt/osxcross/cross/ && \
-    ./config-set.sh -a --**REPLACE**-- && \
+    ./config-set.sh -a x86_64-apple && \
+    . ~/.bashrc \
     exit 0
 
     # select sdk by ./config-set.sh -s sdk
     #  ie select-set.sh -s macosx12.1 -a arm64-apple
 
 # force these from here
-# leave docker in a recoverable state while debugging
-RUN /opt/osxcross/cross/make-zlib.sh && exit 0
-RUN /opt/osxcross/cross/make-xv.sh && exit 0
-RUN /opt/osxcross/cross/make-bzip2.sh && exit 0
-RUN /opt/osxcross/cross/make-bison.sh && exit 0
-RUN /opt/osxcross/cross/make-jpeg.sh && exit 0
-RUN /opt/osxcross/cross/make-pcre.sh && exit 0
-RUN /opt/osxcross/cross/make-pcre2.sh && exit 0
-RUN /opt/osxcross/cross/make-libffi.sh && exit 0
-RUN /opt/osxcross/cross/make-png.sh && exit 0
-RUN /opt/osxcross/cross/make-icu.sh && exit 0
-RUN /opt/osxcross/cross/make-iconv.sh && exit 0
-RUN /opt/osxcross/cross/make-readline.sh && exit 0
-RUN /opt/osxcross/cross/make-harfbuzz.sh && exit 0
-RUN /opt/osxcross/cross/make-freetype.sh && exit 0
-RUN /opt/osxcross/cross/make-fontconfig.sh && exit 0
-RUN /opt/osxcross/cross/make-openssl.sh && exit 0
-RUN /opt/osxcross/cross/make-libevent.sh && exit 0
-RUN /opt/osxcross/cross/make-hunspell.sh && exit 0
-RUN /opt/osxcross/cross/make-gettext.sh && exit 0
-RUN /opt/osxcross/cross/make-libxml2.sh && exit 0
-RUN /opt/osxcross/cross/make-boost.sh && exit 0
-RUN /opt/osxcross/cross/make-sqlite.sh && exit 0
-RUN /opt/osxcross/cross/make-unixodbc.sh && exit 0
-RUN /opt/osxcross/cross/make-ncurses.sh && exit 0
-RUN /opt/osxcross/cross/make-postgres-client.sh && exit 0
-RUN /opt/osxcross/cross/make-mysql-client.sh && exit 0
-
-# try to make libclang
-RUN /opt/osxcross/cross/make-libclang.sh || exit 0
+#**PACKAGES_INSERT_HERE**
 
 # make sure we didn't forget anything, build custom libs
 RUN /opt/osxcross/cross/buildBase.sh && exit 0
@@ -115,6 +91,24 @@ RUN /opt/osxcross/cross/make-qt6.sh && exit 0
 
 # add qt host tools to path
 ENV PATH="/opt/osxcross/cross/host/bin:/opt/osxcross/cross/host/qt6/bin:$PATH"
+
+# compile for arm64
+RUN cd /opt/osxcross/cross/ && \
+    ./config-set.sh -a arm64-apple && \
+    . ~/.bashrc \
+    exit 0
+# cleanup old build
+RUN /opt/osxcross/cross/buildBase.sh -St -c -a && exit 0
+
+# force these from here
+#**PACKAGES_INSERT_HERE**
+
+# make sure we didn't forget anything, build custom libs
+RUN /opt/osxcross/cross/buildBase.sh && exit 0
+
+# create qt
+RUN /opt/osxcross/cross/make-qt6.sh && exit 0
+
 
 # cleanup
 RUN cd /opt/osxcross/cross && rm -Rf src pkg && \

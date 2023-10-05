@@ -8,7 +8,7 @@ SHA256=4077d6a6a75aeb01884f708919d25934c93305e49f7e3f36db9129320e6f4f3d
 DOWNLOADURL=https://www.ijg.org/files/$TARNAME
 DIRNAME=jpeg-$VERSION
 HOST_BUILD= # set true if host build required
-OUT_OF_SRC_BUILD= # set true if build target out of source
+OUT_OF_SRC_BUILD=true # set true if build target out of source
 
 source $(dirname "$0")/common.sh
 

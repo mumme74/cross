@@ -24,7 +24,7 @@ hostConfigFn() {
     ../$FILENAME/bootstrap.sh \
       --with-toolset=clang \
       --without-libraries=python \
-      --prefix=$SRC_DIR/host/
+      --prefix=$CROSS_DIR/host/
 
     failOnConfigure $?
   fi
@@ -45,7 +45,7 @@ hostBuildFn() {
     -q -d2 \
     --build-dir=$HOST_BUILD_DIR \
     --without-python \
-    --prefix=$SRC_DIR/host \
+    --prefix=$CROSS_DIR/host \
     -j$(nproc) \
     | tee $HOST_BUILD_DIR/.build.log
 
@@ -61,6 +61,7 @@ stubFn() {
   echo "null">/dev/null
 }
 HOST_INSTALL_FN=stubFn # intentional stub
+HOST_CLEAN_CMD="rm -rf *"
 
 
 targetConfigFn() {
@@ -108,12 +109,14 @@ targetBuildFn() {
   ;"
   echo -e "$usrConfigJam" > $SRC_DIR/$FILENAME/tools/build/src/user-config.jam
 
+  ARCH=${COMPILER_ARCH:0:3}
+  ARCH=${ARCH/aar/arm}
 
   $TARGET_BUILD_DIR/b2 install \
     toolset=clang-darwin-osxcross \
     target-os=darwin \
     -q -d+2\
-    architecture=${COMPILER_ARCH:0:3} \
+    architecture=${ARCH} \
     address-model=64 \
     abi=aapcs \
     asmflags="--target=$COMPILER_HOST" \
@@ -142,5 +145,7 @@ targetBuildFn() {
 TARGET_BUILD_FN=targetBuildFn
 
 TARGET_INSTALL_FN=stubFn #intentional stub
+
+TARGET_CLEAN_CMD="rm -rf *"
 
 start

@@ -30,6 +30,7 @@ hostConfigFn() {
   fi
 }
 HOST_CONFIG_FN=hostConfigFn
+HOST_CLEAN_CMD="rm -rf *"
 
 
 # build step 2
@@ -61,5 +62,6 @@ targetConfigFn() {
   fi
 }
 TARGET_CONFIG_FN=targetConfigFn
+TARGET_CLEAN_CMD="rm -rf *"
 
 start

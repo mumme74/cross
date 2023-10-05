@@ -4,7 +4,6 @@ TARGET_DIR=/opt/osxcross/target
 CROSS_DIR=/opt/osxcross/cross
 SDK=
 SDK_lower=
-PGK_CONFIG_DIR=$TARGET_DIR/usr/lib/pkgconfig
 
 cd $CROSS_DIR
 source config.sh
@@ -48,7 +47,7 @@ if [ -z "$ccompiler" ]; then
   exit 1
 elif [ "${ccompiler:0:5}" == "arm64" ]; then
   echo "${ccompiler:0:5} not recomended, switching to aarch64 instead"
-  ccompiler="aarch64${ccompiler:6}"
+  ccompiler="aarch64${ccompiler:5}"
 fi
 
 paths=$(echo $PATH | tr ":" " ")
@@ -84,6 +83,8 @@ COMPILER_HOST=${COMPILER_ARCH}-${COMPILER_TO_SYSTEM}${DARWIN_VERSION}
 COMPILER_PREFIX=$COMPILER_HOST-
 echo "Setting compiler prefix to: $COMPILER_ARCH-${COMPILER_TO_SYSTEM}$DARWIN_VERSION"
 
+PGK_CONFIG_DIR=$TARGET_DIR/$COMPILER_ARCH/usr/lib/pkgconfig
+
 TARGET_DIR_ESC=$(echo $TARGET_DIR | sed 's/\//\\\//g')
 
 echo "Updating config"
@@ -115,5 +116,5 @@ fi
 bashrc_src=$(echo "$bashrc_src" | \
       sed -e "s/^\s*\(export OSXCROSS_PKG_CONFIG_PATH=\).*$/\1$PKG_CONFIG_DIR_ESC/" \
       )
-echo "$bashrc_src"
+echo "$bashrc_src" > $HOME/.bashrc
 

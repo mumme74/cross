@@ -7,7 +7,7 @@ TARNAME=$FILENAME.tar.gz
 SHA256=d66c56ad259a82cf2a9dfc408b32bf5da52371500b84745f7fb8b645712df676
 DOWNLOADURL=https://github.com/libffi/libffi/releases/download/v$VERSION/$TARNAME
 HOST_BUILD= # set true if host build required
-OUT_OF_SRC_BUILD= # set true if build target out of source
+OUT_OF_SRC_BUILD=true # set true if build target out of source
 
 source $(dirname "$0")/common.sh
 

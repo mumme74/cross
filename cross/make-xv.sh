@@ -8,7 +8,7 @@ SHA256=1c382e0bc2e4e0af58398a903dd62fff7e510171d2de47a1ebe06d1528e9b7e9
 DOWNLOADURL=https://tukaani.org/$PKG/$TARNAME
 
 HOST_BUILD= # set true if host build required
-OUT_OF_SRC_BUILD= # set true if build target out of source
+OUT_OF_SRC_BUILD=true # set true if build target out of source
 
 source $(dirname "$0")/common.sh
 
@@ -24,5 +24,6 @@ TARGET_CONFIG_CMD="configure \
     LDFLAGS=\"-L$USR_DIR/lib\" \
     --prefix=$USR_DIR
   "
+TARGET_CLEAN_CMD="rm -rf *"
 
 start

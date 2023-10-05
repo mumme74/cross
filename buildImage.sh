@@ -1,37 +1,35 @@
 #!/bin/bash
 
-archs=("arm64e" "arm64" "x86_64")
-
 usage() {
   echo -e "Replace a Dockerfile.common.* with correct architecture"
   echo -e " Build a docker image"
   echo -e " $0 -f Dockerfile.common -a architecture [-t tagname | -e ] "
   echo -e "  -f dockerfile     The dockerfile to convert"
-  echo -e "  -a architecture   The architecture to use: ${archs[@]}"
   echo -e " Setting mode:\n  You use either -t or -e:"
   echo -e "  -t is tag name given to docker, create image directly"
   echo -e "  -e echo mode, print converted dockerfile to stdout\n"
+  echo -e "  -i incremental build (For debug, create incremental containers as build progresses, for debug)"
   echo -e "  Tagmode (-t) is simplest\n"
   echo -e "  With echomode (-e) you can create your own Dockerfile with"
-  echo -e "   $0 -f Dockerfile.common -a arm64 -e > Dockerfile.myown"
+  echo -e "   $0 -f Dockerfile.common -e > Dockerfile.myown"
   echo -e "   or build directly:"
-  echo -e "   $0 -f Dockerfile.common -a x86_64 -e > docker build ."
+  echo -e "   $0 -f Dockerfile.common -e > docker build ."
 
   exit 0
 }
 
 FILE=
-ARCH=
 TAG=
 ECHOMODE=
+INCREMENTAL=
 
-while getopts hef:a:t: flag; do
+while getopts hef:t: flag; do
   case "$flag" in
     f) FILE=$OPTARG;;
-    a) ARCH=$OPTARG;;
     t) TAG=$OPTARG;;
     e) ECHOMODE=true;;
     h) usage;;
+    i) INCREMENTAl=true;;
     *) echo "unrecognized parameter $1"
        exit 1
     ;;
@@ -42,15 +40,9 @@ done
 if [ -z "$FILE" ]; then
   echo "Must give a Dockerfile to convert"
   exit 1
-elif [ -z "$ARCH" ]; then
-  echo "Must give a architecture to build image with"
-  exit 1
 elif [[ -z "$TAG" && "$ECHOMODE" != true ]] || \
      [[ ! -z "$TAG" && "$ECHOMODE" == true ]]; then
   echo -e "Must select either tagmode or echomode, see:\n $0 -h"
-  exit 1
-elif [[ ! "${archs[*]}" =~ "$ARCH" ]]; then
-  echo "$ARCH is not a valid architecture"
   exit 1
 elif [ ! -f "$FILE" ]; then
   echo "File $FILE not found"
@@ -65,7 +57,11 @@ if [ "$?" -ne 0 ]; then
   exit 1
 fi
 
-cont=$(cat "$FILE" | sed -e "s/--\*\*REPLACE\*\*--/$ARCH-apple/")
+packages=$(cat Dockerfile.packages)
+cont=$(cat "$FILE")
+[ "$INCREMENTAL" == true ] && \
+  cont="${cont//"**PACKAGES_INSERT_HERE**"/"$packages"}"
+
 if [ "$ECHOMODE" == true ]; then
   echo "$cont"
   exit 0

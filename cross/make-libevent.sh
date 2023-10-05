@@ -34,4 +34,6 @@ installFn() {
 }
 TARGET_INSTALL_FN=installFn
 
+TARGET_CLEAN_CMD="rm -rf *"
+
 start

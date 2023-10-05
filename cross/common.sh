@@ -1,8 +1,13 @@
 #!/bin/bash
+
+# the architecture
+source $(dirname "$0")/config.sh
+
 CROSS_DIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 SRC_DIR=$CROSS_DIR/src
 TARGET_DIR="$(dirname "$CROSS_DIR")/target"
-USR_DIR=$TARGET_DIR/usr
+SYSROOT_USR_DIR=$COMPILER_ARCH/usr
+USR_DIR=$TARGET_DIR/$SYSROOT_USR_DIR
 
 # search for include headers in these paths
 # gets set later automatically by this script
@@ -23,6 +28,8 @@ HOST_BUILD_FN=
 HOST_BUILD_CMD=
 HOST_INSTALL_FN=
 HOST_INSTALL_CMD=
+HOST_CLEAN_FN=
+HOST_CLEAN_CMD=
 TARGET_BUILD=true
 TARGET_BUILD_DIR=
 TARGET_CONFIG_CMD=
@@ -31,14 +38,13 @@ TARGET_BUILD_CMD=
 TARGET_BUILD_FN=
 TARGET_INSTALL_CMD=
 TARGET_INSTALL_FN=
+TARGET_CLEAN_FN=
+TARGET_CLEAN_CMD=
 
 cd "$CROSS_DIR"
 
 # read command lines
 source $(dirname "$0")/getopt.sh
-
-# the architecture
-source $(dirname "$0")/config.sh
 
 searchDirs() {
   # arg1 = resulting variable
@@ -121,6 +127,11 @@ failOnInstall() {
   failOnError "$1" "Failed to install $PKG"
 }
 
+failOnClean() {
+  #arg1 previous clean command, reult of make clean
+  failOnError "$1" "Failed to clean $PKG"
+}
+
 downloadAndValidate() {
   if [ ! -f "$CROSS_DIR/pkg/$TARNAME" ]; then
     wget -P $CROSS_DIR/pkg/ $DOWNLOADURL
@@ -199,6 +210,13 @@ defaultInstallFn() {
   failOnInstall $?
 }
 
+defaultCleanFn() {
+  local cleanCmd=$1
+  echo "$cleanCmd"
+  eval "$cleanCmd"
+  failOnClean $?
+}
+
 configureAndBuild() {
   local srcDir=$1
   local buildDir=$2
@@ -208,6 +226,15 @@ configureAndBuild() {
   local installFn=$6
   local buildCmd=$7
   local installCmd=$8
+  local cleanCmd=$9
+  local cleanFn=${10}
+
+  if [ "$CLEAN" == true ]; then
+    cd "$buildDir"
+    [ -z "$cleanFn" ] && defaultCleanFn "$cleanCmd" || $cleanFn
+    cd "$srcDir"
+    [ "$FORCE" != true ] && return
+  fi
 
   # force rebuild clean
   if [ "$FORCE" == true ]; then
@@ -236,6 +263,7 @@ configureAndBuildHost() {
     local configFn=$HOST_CONFIG_FN
     local buildCmd=$HOST_BUILD_CMD
     local installCmd=$HOST_INSTALL_CMD
+    local cleanCmd=$HOST_CLEAN_CMD
 
     # select configFn
     [ -z "$configFn" ] &&
@@ -244,6 +272,10 @@ configureAndBuildHost() {
       buildCmd="make --jobs=$(nproc) JOBS=$(nproc)"
     [ -z "$installCmd" ] &&
       installCmd="make install"
+    if [ -z "$cleanCmd" ]; then
+      [ "$OUT_OF_SRC_BUILD" == true ] &&
+        cleanCmd="rm -rf *" || cleanCmd="make distclean"
+    fi
 
     configureAndBuild \
       "$SRC_DIR/$DIRNAME" \
@@ -253,7 +285,9 @@ configureAndBuildHost() {
       "$HOST_BUILD_FN" \
       "$HOST_INSTALL_FN" \
       "$buildCmd" \
-      "$installCmd"
+      "$installCmd" \
+      "$cleanCmd" \
+      "$HOST_CLEAN_FN"
   fi
 }
 
@@ -264,6 +298,7 @@ configureAndBuildTarget() {
     local configFn="$TARGET_CONFIG_FN"
     local buildCmd=$TARGET_BUILD_CMD
     local installCmd=$TARGET_INSTALL_CMD
+    local cleanCmd=$TARGET_CLEAN_CMD
 
     # select configFn
     [ -z "$configFn" ] && \
@@ -272,6 +307,10 @@ configureAndBuildTarget() {
       buildCmd="make --jobs=$(nproc) JOBS=$(nproc)"
     [ -z "$installCmd" ] &&
       installCmd="make install"
+    if [ -z "$cleanCmd" ]; then
+      [ "$OUT_OF_SRC_BUILD" == true ] &&
+        cleanCmd="rm -rf *" || cleanCmd="make distclean"
+    fi
 
     configureAndBuild \
       "$SRC_DIR/$DIRNAME" \
@@ -281,8 +320,19 @@ configureAndBuildTarget() {
       "$TARGET_BUILD_FN" \
       "$TARGET_INSTALL_FN" \
       "$buildCmd" \
-      "$installCmd"
+      "$installCmd" \
+      "$cleanCmd" \
+      "$TARGET_CLEAN_FN"
   fi
+}
+
+removeBuildDirs() {
+  [ -d "$HOST_BUILD_DIR" ] && \
+    rm -rf "$HOST_BUILD_DIR" && \
+    echo "Removing $HOST_BUILD_DIR"
+  [ -d "$TARGET_BUILD_DIR" ] && \
+    rm -rf "$TARGET_BUILD_DIR" && \
+    echo "Removing $TARGET_BUILD_DIR"
 }
 
 [ -z "$DIRNAME" ] && DIRNAME=$FILENAME
@@ -322,6 +372,7 @@ start() {
     case $st in
       h) configureAndBuildHost;;
       t) configureAndBuildTarget;;
+      c) removeBuildDirs;;
     esac
   done
 }

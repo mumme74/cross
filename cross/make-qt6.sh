@@ -28,6 +28,7 @@ HOST_CONFIG_CMD="configure \
 
 HOST_BUILD_CMD="cmake --build . --parallel"
 HOST_INSTALL_CMD="cmake --install ."
+HOST_CLEAN_CMD="rm -rf *"
 
 incl=$USR_DIR/include
 
@@ -55,7 +56,9 @@ TARGET_CONFIG_CMD="configure \
              -I$incl/readline \
              -I$incl/textstyle \
              -I$incl/unicode \
-             -I$incl/unixODBC \" \
+             -I$incl/unixODBC \
+             -I$incl/llvm \
+             -I$incl/llvm-c \" \
       LDFLAGS=\"-L$USR_DIR/lib\" \
       -prefix $USR_DIR \
       -sysroot $TARGET_DIR \
@@ -82,11 +85,14 @@ TARGET_CONFIG_CMD="configure \
         -DCMAKE_TOOLCHAIN_FILE=$CROSS_DIR/make-qt6-toolchain.cmake \
         -DQT_BUILD_EXAMPLES=OFF \
         -DQT_BUILD_TESTS=OFF \
+        -DLLVM_INSTALL_DIR=$USR_DIR/ \
     "
 
 
 TARGET_BUILD_CMD="cmake --build . --parallel"
 
 TARGET_INSTALL_CMD="cmake --install ."
+
+TARGET_CLEAN_CMD="rm -rf *"
 
 start

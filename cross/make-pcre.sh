@@ -7,7 +7,7 @@ TARNAME=$FILENAME.tar.bz2
 SHA256=4dae6fdcd2bb0bb6c37b5f97c33c2be954da743985369cddac3546e3218bffb8
 DOWNLOADURL=https://downloads.sourceforge.net/project/pcre/pcre/$VERSION/$TARNAME
 HOST_BUILD= # set true if host build required
-OUT_OF_SRC_BUILD= # set true if build target out of source
+OUT_OF_SRC_BUILD=true # set true if build target out of source
 
 source $(dirname "$0")/common.sh
 
