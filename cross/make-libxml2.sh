@@ -28,6 +28,6 @@ TARGET_CONFIG_CMD="configure \
     RANLIB=${COMPILER_PREFIX}ranlib \
     CFLAGS=\"-O2 -fno-semantic-interposition -I$USR_DIR/include\" \
     LDFLAGS=\"-L$USR_DIR/lib\" \
-    --prefix=$USR_DIR
+    --prefix=$USR_DIR \
   "
 start
