@@ -133,6 +133,7 @@ failOnClean() {
 }
 
 downloadAndValidate() {
+  mkdir -p "$CROSS_DIR/pkg"
   if [ ! -f "$CROSS_DIR/pkg/$TARNAME" ]; then
     wget -P $CROSS_DIR/pkg/ $DOWNLOADURL
   fi
@@ -148,6 +149,7 @@ downloadAndValidate() {
 }
 
 extractAndPatch() {
+  mkdir -p "$SRC_DIR"
   if [ ! -d "$SRC_DIR/$DIRNAME" ]; then
     extract
 
@@ -274,7 +276,7 @@ configureAndBuildHost() {
       installCmd="make install"
     if [ -z "$cleanCmd" ]; then
       [ "$OUT_OF_SRC_BUILD" == true ] &&
-        cleanCmd="rm -rf *" || cleanCmd="make distclean"
+        cleanCmd="rm -rf $HOST_BUILD_DIR" || cleanCmd="make distclean || rm -rf $HOST_BUILD_DIR"
     fi
 
     configureAndBuild \
@@ -309,7 +311,7 @@ configureAndBuildTarget() {
       installCmd="make install"
     if [ -z "$cleanCmd" ]; then
       [ "$OUT_OF_SRC_BUILD" == true ] &&
-        cleanCmd="rm -rf *" || cleanCmd="make distclean"
+        cleanCmd="rm -rf $TARGET_CONFIG_FN" || cleanCmd="make distclean || rm -rf $TARGET_BUILD_DIR"
     fi
 
     configureAndBuild \
@@ -326,13 +328,17 @@ configureAndBuildTarget() {
   fi
 }
 
-removeBuildDirs() {
+removeHostBuildDir() {
   [ -d "$HOST_BUILD_DIR" ] && \
     rm -rf "$HOST_BUILD_DIR" && \
     echo "Removing $HOST_BUILD_DIR"
-  [ -d "$TARGET_BUILD_DIR" ] && \
-    rm -rf "$TARGET_BUILD_DIR" && \
+}
+
+removeTargetBuildDir() {
+  if [ -d "$TARGET_BUILD_DIR" ]; then
+    rm -rf "$TARGET_BUILD_DIR"
     echo "Removing $TARGET_BUILD_DIR"
+  fi
 }
 
 [ -z "$DIRNAME" ] && DIRNAME=$FILENAME
@@ -346,14 +352,13 @@ for st in ${STEP[@]}; do
 done
 
 # if only download, we stop here
-if [[ ! ${STEP[@]} =~ "h" ]] && [[ ! ${STEP[@]} =~ "t" ]]; then
+if [[ ! ${STEP[@]} =~ "h" ]] && [[ ! ${STEP[@]} =~ "t" ]] && \
+   [[ ! ${STEP[@]} =~ "r" ]] && [[ ! ${STEP[@]} =~ "R" ]]; then
   exit 0
 fi
 
 echo "Building $PKG"
 scanDirs
-cd $SRC_DIR/$DIRNAME
-
 
 # initialize these before any rules are set
 [ "$HOST_BUILD" == true ] && \
@@ -372,7 +377,8 @@ start() {
     case $st in
       h) configureAndBuildHost;;
       t) configureAndBuildTarget;;
-      c) removeBuildDirs;;
+      r) removeHostBuildDir;;
+      R) removeTargetBuildDir;;
     esac
   done
 }

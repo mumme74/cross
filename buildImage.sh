@@ -23,7 +23,7 @@ TAG=
 ECHOMODE=
 INCREMENTAL=
 
-while getopts hef:t: flag; do
+while getopts hef:t:i flag; do
   case "$flag" in
     f) FILE=$OPTARG;;
     t) TAG=$OPTARG;;
@@ -59,8 +59,11 @@ fi
 
 packages=$(cat Dockerfile.packages)
 cont=$(cat "$FILE")
-[ "$INCREMENTAL" == true ] && \
-  cont="${cont//"**PACKAGES_INSERT_HERE**"/"$packages"}"
+if [ "$INCREMENTAL" == true ]; then
+  cont="${cont//"#**PACKAGES_INSERT_HERE**"/"$packages"}"
+else
+  cont="${cont//"#**PACKAGES_INSERT_HERE**"/"RUN /opt/osxcross/cross/buildBase.sh -a && exit 0"}"
+fi
 
 if [ "$ECHOMODE" == true ]; then
   echo "$cont"

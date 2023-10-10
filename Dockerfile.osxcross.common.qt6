@@ -36,7 +36,7 @@ RUN \
 
 # must be done after git clone
 #RUN --mount=type=bind,target=/opt/osxcross/SDKs,source=SDKs
-COPY SDKs/*.tar.xz /opt/osxcross/tarballs/
+COPY SDKs /opt/osxcross/tarballs/
 
 # extract SDKs from dmg
 #RUN --mount=type=bind,target=/opt/osxcross/DMGs,source=DMGs
@@ -69,47 +69,38 @@ COPY cross /opt/osxcross/cross
 RUN cd /opt/osxcross/cross && chmod ug+x *.sh && exit 0
 
 # set architecture
-#RUN cd /opt/osxcross/cross/ && \
-#    ./config-set.sh -a --**REPLACE**-- && \
-#    exit 0
 RUN cd /opt/osxcross/cross/ && \
     ./config-set.sh -a x86_64-apple && \
-    . ~/.bashrc \
+    . ~/.bashrc && \
     exit 0
 
     # select sdk by ./config-set.sh -s sdk
     #  ie select-set.sh -s macosx12.1 -a arm64-apple
 
-# force these from here
+# force these from here, gets replaced from buildImage.sh
+# must match this exact string, don't change anything!
 #**PACKAGES_INSERT_HERE**
 
-# make sure we didn't forget anything, build custom libs
-RUN /opt/osxcross/cross/buildBase.sh && exit 0
-
-# create qt
-RUN /opt/osxcross/cross/make-qt6.sh && exit 0
 
 # add qt host tools to path
 ENV PATH="/opt/osxcross/cross/host/bin:/opt/osxcross/cross/host/qt6/bin:$PATH"
 
-# compile for arm64
+# compile for arm64, cleanup old build
 RUN cd /opt/osxcross/cross/ && \
     ./config-set.sh -a arm64-apple && \
-    . ~/.bashrc \
+    . ~/.bashrc && \
     exit 0
+
 # cleanup old build
-RUN /opt/osxcross/cross/buildBase.sh -St -c -a && exit 0
+RUN /opt/osxcross/cross/buildBase.sh -SR -a && exit 0
 
-# force these from here
+# force these from here, gets replaced from buildImage.sh
+# must match this exact string, don't change anything!
 #**PACKAGES_INSERT_HERE**
-
-# make sure we didn't forget anything, build custom libs
-RUN /opt/osxcross/cross/buildBase.sh && exit 0
-
-# create qt
-RUN /opt/osxcross/cross/make-qt6.sh && exit 0
-
 
 # cleanup
 RUN cd /opt/osxcross/cross && rm -Rf src pkg && \
     cd /opt/osxcross/ && rm -Rf tarballs/* DMGs/* exit 0
+
+FROM intermediate AS final
+ENTRYPOINT ["/bin/bash"]

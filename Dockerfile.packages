@@ -28,3 +28,6 @@ RUN /opt/osxcross/cross/make-mysql-client.sh && exit 0
 
 # try to make libclang
 RUN /opt/osxcross/cross/make-libclang.sh || exit 0
+
+# create qt
+RUN /opt/osxcross/cross/make-qt6.sh && exit 0

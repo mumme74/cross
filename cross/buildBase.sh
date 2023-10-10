@@ -44,10 +44,9 @@ if [ "$USE_ALL" == true ]; then
 fi
 
 # strip -a from arguments
-args=$@
 PARAMS=()
-for vlu in "${args[@]}"; do
-  [ "$vlu" != "a" ] && PARAMS+=($vlu)
+for vlu in "$@"; do
+  [ "$vlu" != "-a" ] && PARAMS+=($vlu)
 done
 
 # run all scripts
