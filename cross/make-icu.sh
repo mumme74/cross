@@ -50,8 +50,8 @@ targetConfigFn() {
       AR=${COMPILER_PREFIX}ar \
       STRIP=${COMPILER_PREFIX}strip \
       RANLIB=${COMPILER_PREFIX}ranlib \
-      CFLAGS=" -I$USR_DIR/include/zlib" \
-      LDFLAGS="-L$USR_DIR/lib" \
+      CFLAGS=" -I$USR_DIR/include -I$SDK_DIR/usr/include" \
+      LDFLAGS="-L$USR_DIR/lib -I$SDK_DIR/usr/lib" \
       --prefix=$USR_DIR \
       RELEASE_CFLAGS='-O2' \
       RELEASE_CXXFLAGS='-O2' \
